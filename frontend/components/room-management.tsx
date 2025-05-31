@@ -2,15 +2,13 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-export function SubjectManagement() {
+export function RoomManagement() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Subject Management</CardTitle>
+        <CardTitle>Room Management</CardTitle>
       </CardHeader>
-      <CardContent>
-        {/* Add subject management content */}
-      </CardContent>
+      <CardContent>{/* Add room management content */}</CardContent>
     </Card>
   );
 }
