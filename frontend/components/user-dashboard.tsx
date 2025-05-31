@@ -1,16 +1,22 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Layout } from "@/components/layout"
-import { TimetableViewer } from "@/components/timetable-viewer"
-import { FacultyViewer } from "@/components/faculty-viewer"
-import { GraduationCap, Clock, MapPin, BookOpen } from "lucide-react"
+import { useState } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import Layout from "./layout";
+import { TimetableViewer } from "@/components/timetable-viewer";
+import { FacultyViewer } from "@/components/faculty-viewer";
+import { GraduationCap, Clock, MapPin, BookOpen } from "lucide-react";
 
 export function UserDashboard() {
-  const [activeTab, setActiveTab] = useState("timetables")
+  const [activeTab, setActiveTab] = useState("timetables");
 
   const upcomingClasses = [
     {
@@ -34,7 +40,7 @@ export function UserDashboard() {
       faculty: "Dr. Wilson",
       department: "Physics",
     },
-  ]
+  ];
 
   const todayStats = [
     {
@@ -61,14 +67,16 @@ export function UserDashboard() {
       icon: Clock,
       color: "text-orange-600",
     },
-  ]
+  ];
 
   return (
     <Layout>
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold">Dashboard</h1>
-          <p className="text-muted-foreground">View your institution's timetables and faculty information</p>
+          <p className="text-muted-foreground">
+            View your institution's timetables and faculty information
+          </p>
         </div>
 
         {/* Today's Stats */}
@@ -76,7 +84,9 @@ export function UserDashboard() {
           {todayStats.map((stat, index) => (
             <Card key={index}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  {stat.title}
+                </CardTitle>
                 <stat.icon className={`h-4 w-4 ${stat.color}`} />
               </CardHeader>
               <CardContent>
@@ -86,7 +96,11 @@ export function UserDashboard() {
           ))}
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <Tabs
+          value={activeTab}
+          onValueChange={setActiveTab}
+          className="space-y-6"
+        >
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="timetables">Timetables</TabsTrigger>
             <TabsTrigger value="faculty">Faculty</TabsTrigger>
@@ -105,16 +119,23 @@ export function UserDashboard() {
             <Card>
               <CardHeader>
                 <CardTitle>Today's Classes</CardTitle>
-                <CardDescription>Your scheduled classes for today</CardDescription>
+                <CardDescription>
+                  Your scheduled classes for today
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   {upcomingClasses.map((class_, index) => (
-                    <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div
+                      key={index}
+                      className="flex items-center justify-between p-4 border rounded-lg"
+                    >
                       <div className="flex items-center gap-4">
                         <div className="flex flex-col items-center justify-center w-16 h-16 bg-blue-100 dark:bg-blue-900 rounded-lg">
                           <Clock className="h-5 w-5 text-blue-600" />
-                          <span className="text-xs font-medium text-blue-600">{class_.time.split(" - ")[0]}</span>
+                          <span className="text-xs font-medium text-blue-600">
+                            {class_.time.split(" - ")[0]}
+                          </span>
                         </div>
                         <div>
                           <h3 className="font-semibold">{class_.subject}</h3>
@@ -128,7 +149,9 @@ export function UserDashboard() {
                       </div>
                       <div className="text-right">
                         <p className="font-medium">{class_.time}</p>
-                        <p className="text-sm text-muted-foreground">{class_.room}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {class_.room}
+                        </p>
                       </div>
                     </div>
                   ))}
@@ -139,5 +162,5 @@ export function UserDashboard() {
         </Tabs>
       </div>
     </Layout>
-  )
+  );
 }
