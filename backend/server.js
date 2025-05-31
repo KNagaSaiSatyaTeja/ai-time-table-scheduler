@@ -1,22 +1,34 @@
 const express = require("express");
-const bodyParser = require("body-parser");
 const cors = require("cors");
 const mongoose = require("mongoose");
 const dotenv = require("dotenv");
+const facultyRoutes = require("./routes/faculty");
+const subjectRoutes = require("./routes/subject");
+
+// Load environment variables
 dotenv.config();
 
-// Initialize express app
+// Initialize express
 const app = express();
-const port = process.env.PORT || 3000;
 
 // Middleware
 app.use(cors());
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // Routes
-const Authroute = require("./routes/auth.js");
-app.use("/api/auth", Authroute);
+app.use("/api/faculty", facultyRoutes);
+app.use("/api/subjects", subjectRoutes);
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({
+    success: false,
+    message: "Something went wrong!",
+    error: process.env.NODE_ENV === "development" ? err.message : undefined,
+  });
+});
 
 // Connect to MongoDB
 mongoose
@@ -24,9 +36,15 @@ mongoose
     useNewUrlParser: true,
     useUnifiedTopology: true,
   })
-  .then(() => console.log("Connected to MongoDB"))
-  .catch((err) => console.log("Error connecting to MongoDB:", err.message));
-
-app.listen(port, () => {
-  console.log(`Server running at http://localhost:${port}`);
-});
+  .then(() => {
+    console.log("Connected to MongoDB");
+    // Start server only after successful database connection
+    const PORT = process.env.PORT || 5000;
+    app.listen(PORT, () => {
+      console.log(`Server is running on http://localhost:${PORT}`);
+    });
+  })
+  .catch((error) => {
+    console.error("MongoDB connection error:", error);
+    process.exit(1);
+  });
