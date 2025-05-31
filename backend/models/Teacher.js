@@ -2,10 +2,18 @@ const mongoose = require("mongoose");
 
 const teacherSchema = new mongoose.Schema(
   {
-    userId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+    name: {
+      type: String,
       required: true,
+    },
+    department: {
+      type: String,
+      required: true,
+    },
+    email: {
+      type: String,
+      required: true,
+      unique: true,
     },
     department: {
       type: String,
@@ -17,6 +25,10 @@ const teacherSchema = new mongoose.Schema(
         required: true,
       },
     ],
+    contactNumber: {
+      type: String,
+      required: true,
+    },
     availability: [
       {
         day: {
@@ -52,7 +64,6 @@ const teacherSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-    versionKey: false,
   }
 );
 
