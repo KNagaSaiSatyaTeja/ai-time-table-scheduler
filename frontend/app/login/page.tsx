@@ -14,33 +14,74 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+
 import { useAuth } from "@/hooks/use-auth";
 import { GraduationCap } from "lucide-react";
+import axios from "axios";
+
+interface User {
+  id: string;
+  email: string;
+  username: string;
+  role: "admin" | "student" | "Teacher";
+  token: string;
+}
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<"admin" | "user">("user");
+
   const { login } = useAuth();
   const router = useRouter();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Mock login - in real app, this would call your API
-    login({
-      id: "1",
-      email,
-      name: role === "admin" ? "Admin User" : "Regular User",
-      role,
-    });
-    router.push("/dashboard");
+
+    try {
+      const response = await axios.post(
+        "http://localhost:5000/api/auth/login",
+        {
+          email,
+          password,
+        }
+      );
+
+      // Correctly access the user data from response
+      const { user, token } = response.data;
+
+      console.log("Login response:", response.data);
+      console.log("User data:", user);
+
+      // Make sure all required fields are present
+      if (
+        !user ||
+        !user.id ||
+        !user.email ||
+        !user.username ||
+        !user.role ||
+        !token
+      ) {
+        throw new Error("Invalid response format from server");
+      }
+
+      // Save user to context with correct data structure
+      login({
+        id: user.id,
+        email: user.email,
+        username: user.username,
+        role: user.role,
+        token: token,
+      });
+
+      // Navigate to dashboard
+      router.push("/dashboard");
+    } catch (error: any) {
+      console.error(
+        "Login failed:",
+        error.response?.data?.message || error.message
+      );
+      // You might want to add some user feedback here, like a toast notification
+    }
   };
 
   return (
@@ -79,21 +120,7 @@ export default function LoginPage() {
                 required
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="role">Role</Label>
-              <Select
-                value={role}
-                onValueChange={(value: "admin" | "user") => setRole(value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select your role" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="admin">Administrator</SelectItem>
-                  <SelectItem value="user">User</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+
             <Button type="submit" className="w-full">
               Sign In
             </Button>

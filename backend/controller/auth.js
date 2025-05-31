@@ -9,7 +9,9 @@ const loginController = async (req, res) => {
   try {
     // Find user by email
     const user = await User.findOne({ email });
+    console.log("User found:", user);
     if (!user) {
+      console.log("User not found for email:", email);
       return res.status(404).json({ message: "User not found" });
     }
 
