@@ -1,4 +1,4 @@
-const { loginController, ReginterController } = require("../controller/auth");
+const { loginController } = require("../controller/auth");
 const express = require("express");
 const router = express.Router();
 const { body, validationResult } = require("express-validator");
@@ -20,23 +20,7 @@ router.post(
   loginController
 );
 // Registration route
-router.post(
-  "/register",
-  [
-    body("username")
-      .isLength({ min: 3 })
-      .withMessage("Username must be at least 3 characters long"),
-    body("email").isEmail().withMessage("Invalid email format"),
-    body("password")
-      .isLength({ min: 8 })
-      .withMessage("Password must be at least 8 characters long"),
-    body("role")
-      .optional()
-      .isIn(["admin", "teacher", "student"])
-      .withMessage("Invalid role"),
-  ],
-  ReginterController
-);
+
 // Middleware to validate request body
 router.use((req, res, next) => {
   const errors = validationResult(req);
