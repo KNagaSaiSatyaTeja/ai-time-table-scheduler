@@ -1,18 +1,31 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Layout } from "@/components/layout"
-import { TimetableManagement } from "@/components/timetable-management"
-import { FacultyManagement } from "@/components/faculty-management"
-import { UserManagement } from "@/components/user-management"
-import { Users, Calendar, GraduationCap, Brain, CheckCircle, AlertCircle } from "lucide-react"
+import { useState } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Layout } from "@/components/layout";
+import { TimetableManagement } from "@/components/timetable-management";
+import { FacultyManagement } from "@/components/faculty-management";
+import { UserManagement } from "@/components/user-management";
+import {
+  Users,
+  Calendar,
+  GraduationCap,
+  Brain,
+  CheckCircle,
+  AlertCircle,
+} from "lucide-react";
 
 export function AdminDashboard() {
-  const [activeTab, setActiveTab] = useState("overview")
+  const [activeTab, setActiveTab] = useState("overview");
 
   const stats = [
     {
@@ -43,7 +56,7 @@ export function AdminDashboard() {
       icon: Brain,
       color: "text-orange-600",
     },
-  ]
+  ];
 
   const recentActivity = [
     {
@@ -70,7 +83,18 @@ export function AdminDashboard() {
       status: "completed",
       user: "Dr. Mike Wilson",
     },
-  ]
+  ];
+  const handleGenerateTimetable = () => {
+    setActiveTab("timetables");
+  };
+
+  const handleAddFaculty = () => {
+    setActiveTab("faculty");
+  };
+
+  const handleManageUsers = () => {
+    setActiveTab("users");
+  };
 
   return (
     <Layout>
@@ -78,11 +102,16 @@ export function AdminDashboard() {
         <div>
           <h1 className="text-3xl font-bold">Admin Dashboard</h1>
           <p className="text-muted-foreground">
-            Manage your institution's scheduling system with AI-powered optimization
+            Manage your institution's scheduling system with AI-powered
+            optimization
           </p>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <Tabs
+          value={activeTab}
+          onValueChange={setActiveTab}
+          className="space-y-6"
+        >
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="timetables">Timetables</TabsTrigger>
@@ -96,12 +125,16 @@ export function AdminDashboard() {
               {stats.map((stat, index) => (
                 <Card key={index}>
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
+                    <CardTitle className="text-sm font-medium">
+                      {stat.title}
+                    </CardTitle>
                     <stat.icon className={`h-4 w-4 ${stat.color}`} />
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold">{stat.value}</div>
-                    <p className="text-xs text-muted-foreground">{stat.change}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {stat.change}
+                    </p>
                   </CardContent>
                 </Card>
               ))}
@@ -111,7 +144,9 @@ export function AdminDashboard() {
             <Card>
               <CardHeader>
                 <CardTitle>Quick Actions</CardTitle>
-                <CardDescription>Frequently used administrative functions</CardDescription>
+                <CardDescription>
+                  Frequently used administrative functions
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="grid gap-4 md:grid-cols-3">
@@ -119,11 +154,21 @@ export function AdminDashboard() {
                     <Brain className="h-6 w-6" />
                     Generate AI Timetable
                   </Button>
-                  <Button variant="outline" className="h-20 flex flex-col gap-2">
+                  <Button
+                    variant="outline"
+                    className="h-20 flex flex-col gap-2"
+                    onClick={handleAddFaculty}
+                  >
                     <GraduationCap className="h-6 w-6" />
                     Add Faculty Member
                   </Button>
-                  <Button variant="outline" className="h-20 flex flex-col gap-2">
+                  <Button
+                    variant="outline"
+                    className="h-20 flex flex-col gap-2"
+                    onClick={() => {
+                      handleManageUsers();
+                    }}
+                  >
                     <Users className="h-6 w-6" />
                     Manage Users
                   </Button>
@@ -135,12 +180,17 @@ export function AdminDashboard() {
             <Card>
               <CardHeader>
                 <CardTitle>Recent Activity</CardTitle>
-                <CardDescription>Latest system activities and updates</CardDescription>
+                <CardDescription>
+                  Latest system activities and updates
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   {recentActivity.map((activity, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div
+                      key={index}
+                      className="flex items-center justify-between p-3 border rounded-lg"
+                    >
                       <div className="flex items-center gap-3">
                         {activity.status === "completed" ? (
                           <CheckCircle className="h-5 w-5 text-green-600" />
@@ -154,7 +204,13 @@ export function AdminDashboard() {
                           </p>
                         </div>
                       </div>
-                      <Badge variant={activity.status === "completed" ? "default" : "secondary"}>
+                      <Badge
+                        variant={
+                          activity.status === "completed"
+                            ? "default"
+                            : "secondary"
+                        }
+                      >
                         {activity.status}
                       </Badge>
                     </div>
@@ -178,5 +234,5 @@ export function AdminDashboard() {
         </Tabs>
       </div>
     </Layout>
-  )
+  );
 }
