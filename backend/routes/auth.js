@@ -1,25 +1,35 @@
-const { loginController } = require("../controller/auth");
 const express = require("express");
 const router = express.Router();
 const { body, validationResult } = require("express-validator");
-const User = require("../models/users");
-const bcrypt = require("bcrypt");
+const { login, register } = require("../controllers/auth");
 const jwt = require("jsonwebtoken");
 const dotenv = require("dotenv");
 dotenv.config();
 
+// Validation middleware
+const loginValidation = [
+  body("email").isEmail().withMessage("Please enter a valid email"),
+  body("password").notEmpty().withMessage("Password is required"),
+];
+
+const registerValidation = [
+  body("username")
+    .isLength({ min: 3 })
+    .withMessage("Username must be at least 3 characters long"),
+  body("email").isEmail().withMessage("Please enter a valid email"),
+  body("password")
+    .isLength({ min: 8 })
+    .withMessage("Password must be at least 8 characters long"),
+  body("role")
+    .optional()
+    .isIn(["admin", "teacher", "student"])
+    .withMessage("Invalid role"),
+];
+
 // Login route
-router.post(
-  "/login",
-  [
-    body("email").isEmail().withMessage("Invalid email format"),
-    body("password")
-      .isLength({ min: 8 })
-      .withMessage("Password must be at least 8 characters long"),
-  ],
-  loginController
-);
+router.post("/login", loginValidation, login);
 // Registration route
+router.post("/register", registerValidation, register);
 
 // Middleware to validate request body
 router.use((req, res, next) => {

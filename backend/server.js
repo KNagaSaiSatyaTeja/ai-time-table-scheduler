@@ -4,6 +4,8 @@ const mongoose = require("mongoose");
 const dotenv = require("dotenv");
 const facultyRoutes = require("./routes/faculty");
 const subjectRoutes = require("./routes/subject");
+const statsRoutes = require("./routes/stats");
+const authRoutes = require("./routes/auth"); // Add this line
 
 // Load environment variables
 dotenv.config();
@@ -17,8 +19,10 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Routes
+app.use("/api/auth", authRoutes); // Add this line
 app.use("/api/faculty", facultyRoutes);
 app.use("/api/subjects", subjectRoutes);
+app.use("/api/stats", statsRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
