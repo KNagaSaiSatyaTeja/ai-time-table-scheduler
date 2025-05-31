@@ -76,10 +76,7 @@ export default function LoginPage() {
       // Navigate to dashboard
       router.push("/dashboard");
     } catch (error: any) {
-      console.error(
-        "Login failed:",
-        error.response?.data?.message || error.message
-      );
+      console.log("Login failed:", error.message);
       // You might want to add some user feedback here, like a toast notification
     }
   };
