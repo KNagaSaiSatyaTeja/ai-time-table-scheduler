@@ -1,22 +1,23 @@
 const express = require("express");
 const router = express.Router();
-const Faculty = require("../models/faculty");
-const auth = require("../middleware/auth");
+const { teacherValidation } = require("../middleware/teacherValidation");
 const {
   getAllTeachers,
+  getTeacherById,
   addTeacher,
   updateTeacher,
   deleteTeacher,
-} = require("../controller/faculty.js");
+} = require("../controller/faculty");
+const { protect } = require("../middleware/auth");
 
-// Get all faculty members
-router.get("/", getAllTeachers);
+router.use(protect); // Protect all routes
 
-// Add new faculty member
-router.post("/", addTeacher);
-// Update faculty member by ID
-router.put("/:id", updateTeacher);
+router.route("/").get(getAllTeachers).post(teacherValidation, addTeacher);
 
-router.delete("/:id", deleteTeacher);
+router
+  .route("/:id")
+  .get(getTeacherById)
+  .put(teacherValidation, updateTeacher)
+  .delete(deleteTeacher);
 
 module.exports = router;
