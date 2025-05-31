@@ -15,6 +15,7 @@ import { Layout } from "@/components/layout";
 import { TimetableManagement } from "@/components/timetable-management";
 import { FacultyManagement } from "@/components/faculty-management";
 import { UserManagement } from "@/components/user-management";
+import { SubjectManagement } from "@/components/subject-management";
 import {
   Users,
   Calendar,
@@ -112,12 +113,27 @@ export function AdminDashboard() {
           onValueChange={setActiveTab}
           className="space-y-6"
         >
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="timetables">Timetables</TabsTrigger>
-            <TabsTrigger value="faculty">Faculty</TabsTrigger>
-            <TabsTrigger value="users">Users</TabsTrigger>
-          </TabsList>
+          <div className="border-b">
+            <div className="overflow-x-auto">
+              <TabsList className="inline-flex min-w-full h-10 items-center justify-start p-1">
+                <TabsTrigger value="overview" className="min-w-[100px]">
+                  Overview
+                </TabsTrigger>
+                <TabsTrigger value="timetables" className="min-w-[100px]">
+                  Timetables
+                </TabsTrigger>
+                <TabsTrigger value="faculty" className="min-w-[100px]">
+                  Faculty
+                </TabsTrigger>
+                <TabsTrigger value="subjects" className="min-w-[100px]">
+                  Subjects
+                </TabsTrigger>
+                <TabsTrigger value="users" className="min-w-[100px]">
+                  Users
+                </TabsTrigger>
+              </TabsList>
+            </div>
+          </div>
 
           <TabsContent value="overview" className="space-y-6">
             {/* Stats Grid */}
@@ -226,6 +242,10 @@ export function AdminDashboard() {
 
           <TabsContent value="faculty">
             <FacultyManagement />
+          </TabsContent>
+
+          <TabsContent value="subjects">
+            <SubjectManagement />
           </TabsContent>
 
           <TabsContent value="users">
