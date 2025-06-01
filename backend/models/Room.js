@@ -13,6 +13,11 @@ const roomSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    department: {
+      type: String,
+      required: true,
+      trim: true,
+    },
     capacity: {
       type: Number,
       required: true,
@@ -29,10 +34,28 @@ const roomSchema = new mongoose.Schema(
         trim: true,
       },
     ],
+    subjects: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Subject",
+        required: true,
+      },
+    ],
     isAvailable: {
       type: Boolean,
       default: true,
     },
+    equipments: [
+      {
+        name: String,
+        quantity: Number,
+        condition: {
+          type: String,
+          enum: ["good", "fair", "maintenance-required"],
+          default: "good",
+        },
+      },
+    ],
   },
   {
     timestamps: true,
