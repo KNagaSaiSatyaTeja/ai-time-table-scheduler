@@ -5,7 +5,9 @@ const dotenv = require("dotenv");
 const facultyRoutes = require("./routes/faculty");
 const subjectRoutes = require("./routes/subject");
 const statsRoutes = require("./routes/stats");
-const authRoutes = require("./routes/auth"); // Add this line
+const roomRoutes = require("./routes/room");
+
+const authRoutes = require("./routes/auth");
 
 // Load environment variables
 dotenv.config();
@@ -19,10 +21,11 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Routes
-app.use("/api/auth", authRoutes); // Add this line
+app.use("/api/auth", authRoutes);
 app.use("/api/faculty", facultyRoutes);
 app.use("/api/subjects", subjectRoutes);
 app.use("/api/stats", statsRoutes);
+app.use("/api/rooms", roomRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
