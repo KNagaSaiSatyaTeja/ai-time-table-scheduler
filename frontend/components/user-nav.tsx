@@ -15,9 +15,12 @@ import { useRouter } from "next/navigation";
 
 export function UserNav() {
   const router = useRouter();
-
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const token = localStorage.getItem("token");
   const handleSignOut = () => {
     // Add your signout logic here
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
     router.push("/login");
   };
 
@@ -34,9 +37,11 @@ export function UserNav() {
       <DropdownMenuContent className="w-56" align="end" forceMount>
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">Administrator</p>
+            <p className="text-sm font-medium leading-none">
+              {user.role == "admin" ? "Administrator" : "User"}
+            </p>
             <p className="text-xs leading-none text-muted-foreground">
-              admin@example.com
+              {user.email || "No email provided"}
             </p>
           </div>
         </DropdownMenuLabel>
