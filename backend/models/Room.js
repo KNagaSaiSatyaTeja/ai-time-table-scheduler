@@ -28,12 +28,7 @@ const roomSchema = new mongoose.Schema(
       enum: ["classroom", "lab", "lecture-hall"],
       default: "classroom",
     },
-    facilities: [
-      {
-        type: String,
-        trim: true,
-      },
-    ],
+
     subjects: [
       {
         type: mongoose.Schema.Types.ObjectId,
@@ -41,21 +36,25 @@ const roomSchema = new mongoose.Schema(
         required: true,
       },
     ],
+    faculty: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Faculty",
+      },
+    ],
+    year: {
+      type: Number,
+      default: new Date().getFullYear(),
+    },
+    semester: {
+      type: Number,
+      enum: [1, 2],
+      default: 1,
+    },
     isAvailable: {
       type: Boolean,
       default: true,
     },
-    equipments: [
-      {
-        name: String,
-        quantity: Number,
-        condition: {
-          type: String,
-          enum: ["good", "fair", "maintenance-required"],
-          default: "good",
-        },
-      },
-    ],
   },
   {
     timestamps: true,
