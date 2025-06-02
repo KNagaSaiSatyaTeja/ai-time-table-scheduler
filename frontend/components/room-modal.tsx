@@ -63,8 +63,8 @@ export function RoomModal({
   const [loading, setLoading] = useState(false);
 
   const [subjects, setSubjects] = useState([
-    { id: "1", name: "Mathematics" },
-    { id: "2", name: "Physics" },
+    { id: "1", name: "Mathematics", code: "MTH" },
+    { id: "2", name: "Physics", code: "PHY" },
   ]);
 
   const facultyOptions: { _id: string; name: string; department: string }[] = [
@@ -215,59 +215,31 @@ export function RoomModal({
 
           <div className="space-y-2">
             <Label>Subjects</Label>
-            <div className="flex gap-2">
-              <Select
-                value={selectedSubject}
-                onValueChange={setSelectedSubject}
-              >
-                <SelectTrigger className="flex-1">
-                  <SelectValue placeholder="Select a subject" />
-                </SelectTrigger>
-                <SelectContent>
-                  {subjects.map((subject) => (
-                    <SelectItem key={subject.id} value={subject.id}>
-                      {subject.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                onClick={handleAddSubject}
-                disabled={!selectedSubject}
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 max-h-48 overflow-auto border rounded p-2">
+              {subjects.map((subject) => (
+                <div key={subject.id} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={subject.id}
+                    checked={formData.subjects.includes(subject.id)}
+                    onCheckedChange={(checked) => {
+                      setFormData((prev) => {
+                        const newSubjects = checked
+                          ? [...prev.subjects, subject.id]
+                          : prev.subjects.filter((id) => id !== subject.id);
+                        return { ...prev, subjects: newSubjects };
+                      });
+                    }}
+                  />
+                  <label
+                    htmlFor={subject.id}
+                    className="text-sm font-medium leading-none"
+                  >
+                    {subject.name} ({subject.code})
+                  </label>
+                </div>
+              ))}
             </div>
           </div>
-
-          {formData.subjects.length > 0 && (
-            <div className="border rounded-lg p-4">
-              <div className="flex flex-wrap gap-2">
-                {formData.subjects.map((subjectId) => {
-                  const subject = subjects.find((s) => s.id === subjectId);
-                  return (
-                    <Badge
-                      key={subjectId}
-                      variant="secondary"
-                      className="flex items-center gap-1"
-                    >
-                      {subject?.name}
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveSubject(subjectId)}
-                        className="text-muted-foreground hover:text-foreground"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  );
-                })}
-              </div>
-            </div>
-          )}
 
           <div className="space-y-2">
             <Label>Faculty</Label>
