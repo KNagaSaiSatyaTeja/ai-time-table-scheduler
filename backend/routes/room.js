@@ -12,7 +12,8 @@ const {
 
 router.use(protect);
 
-router.route("/").get(getAllRooms).post(roomValidation, addRoom);
+router.get("/", getAllRooms);
+router.post("/addRoom", addRoom);
 
 router
   .route("/:id")

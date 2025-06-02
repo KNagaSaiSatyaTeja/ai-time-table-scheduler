@@ -10,7 +10,7 @@ exports.roomValidation = [
 
   body("building").trim().notEmpty().withMessage("Building name is required"),
 
-  body("department").trim().notEmpty().withMessage("Department is required"),
+  // body("department").trim().notEmpty().withMessage("Department is required"),
 
   body("capacity")
     .isInt({ min: 1 })
@@ -21,10 +21,10 @@ exports.roomValidation = [
     .isIn(["classroom", "lab", "lecture-hall"])
     .withMessage("Invalid room type"),
 
-  body("facilities")
-    .optional()
-    .isArray()
-    .withMessage("Facilities must be an array"),
+  // body("facilities")
+  //   .optional()
+  //   .isArray()
+  //   .withMessage("Facilities must be an array"),
 
   body("subjects")
     .isArray()
