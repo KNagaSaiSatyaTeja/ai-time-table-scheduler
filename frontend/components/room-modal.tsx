@@ -37,9 +37,9 @@ interface FormDataType {
   capacity: number;
   year: number;
   semester: number;
-  subjects: string[]; // Add subjects array
-  department: string; // Corrected spelling from 'depertment' to 'department'
-  faculty?: string[]; // Optional faculty array
+  subjects: string[];
+  department: string;
+  faculty?: string[];
 }
 
 export function RoomModal({
@@ -54,16 +54,17 @@ export function RoomModal({
     capacity: 0,
     year: 1,
     semester: 1,
-    subjects: [] as string[], // Add subjects array
+    subjects: [],
     department: "",
-    faculty: [] as string[], // Add faculty array
+    faculty: [],
   });
+
   const [selectedSubject, setSelectedSubject] = useState("");
   const [loading, setLoading] = useState(false);
+
   const [subjects, setSubjects] = useState([
     { id: "1", name: "Mathematics" },
     { id: "2", name: "Physics" },
-    // Add more subjects as needed
   ]);
 
   const facultyOptions: { _id: string; name: string; department: string }[] = [
@@ -121,7 +122,6 @@ export function RoomModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-
     const token = localStorage.getItem("token");
 
     try {
@@ -138,18 +138,12 @@ export function RoomModal({
         );
         toast.success("Room updated successfully");
       } else {
-        console.log("Adding new room with data:", formData);
-        const data = await axios.post(
-          "http://localhost:5000/api/rooms/addRoom",
-          formData,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-          }
-        );
-        console.log("New room added:", data);
+        await axios.post("http://localhost:5000/api/rooms/addRoom", formData, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
         toast.success("Room added successfully");
       }
       onSuccess();
@@ -164,11 +158,11 @@ export function RoomModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="overflow-y-auto">
+      <DialogContent className="max-h-[90vh] overflow-y-auto w-full max-w-3xl">
         <DialogHeader>
           <DialogTitle>{room ? "Edit Room" : "Add New Room"}</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4 px-2 sm:px-4 py-4">
           <div className="space-y-2">
             <Label htmlFor="name">Room Name</Label>
             <Input
@@ -180,6 +174,7 @@ export function RoomModal({
               required
             />
           </div>
+
           <div className="space-y-2">
             <Label htmlFor="building">Building</Label>
             <Input
@@ -191,8 +186,9 @@ export function RoomModal({
               required
             />
           </div>
+
           <div className="space-y-2">
-            <Label htmlFor="building">department</Label>
+            <Label htmlFor="department">Department</Label>
             <Input
               id="department"
               value={formData.department}
@@ -202,6 +198,7 @@ export function RoomModal({
               required
             />
           </div>
+
           <div className="space-y-2">
             <Label htmlFor="capacity">Capacity</Label>
             <Input
@@ -215,6 +212,7 @@ export function RoomModal({
               required
             />
           </div>
+
           <div className="space-y-2">
             <Label>Subjects</Label>
             <div className="flex gap-2">
@@ -245,9 +243,35 @@ export function RoomModal({
             </div>
           </div>
 
+          {formData.subjects.length > 0 && (
+            <div className="border rounded-lg p-4">
+              <div className="flex flex-wrap gap-2">
+                {formData.subjects.map((subjectId) => {
+                  const subject = subjects.find((s) => s.id === subjectId);
+                  return (
+                    <Badge
+                      key={subjectId}
+                      variant="secondary"
+                      className="flex items-center gap-1"
+                    >
+                      {subject?.name}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveSubject(subjectId)}
+                        className="text-muted-foreground hover:text-foreground"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           <div className="space-y-2">
             <Label>Faculty</Label>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
               {facultyOptions.map((faculty) => (
                 <div key={faculty._id} className="flex items-center space-x-2">
                   <Checkbox
@@ -274,32 +298,6 @@ export function RoomModal({
               ))}
             </div>
           </div>
-
-          {formData.subjects.length > 0 && (
-            <div className="border rounded-lg p-4">
-              <div className="flex flex-wrap gap-2">
-                {formData.subjects.map((subjectId) => {
-                  const subject = subjects.find((s) => s.id === subjectId);
-                  return (
-                    <Badge
-                      key={subjectId}
-                      variant="secondary"
-                      className="flex items-center gap-1"
-                    >
-                      {subject?.name}
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveSubject(subjectId)}
-                        className="text-muted-foreground hover:text-foreground"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  );
-                })}
-              </div>
-            </div>
-          )}
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -339,6 +337,7 @@ export function RoomModal({
               </Select>
             </div>
           </div>
+
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel
