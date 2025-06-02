@@ -51,7 +51,7 @@ export function LoginForm() {
         }
       );
 
-      const data = await response.data;
+      const data = await response.data.data;
       // Check if the response is successful
       console.log("Login response:", data);
       if (!response.status || response.status !== 200) {
