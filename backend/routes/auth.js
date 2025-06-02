@@ -1,10 +1,8 @@
 const express = require("express");
 const router = express.Router();
-const { body, validationResult } = require("express-validator");
+const { body } = require("express-validator");
 const { login, register } = require("../controllers/auth");
-const jwt = require("jsonwebtoken");
-const dotenv = require("dotenv");
-dotenv.config();
+const { protect } = require("../middleware/auth");
 
 // Validation middleware
 const loginValidation = [
@@ -26,40 +24,23 @@ const registerValidation = [
     .withMessage("Invalid role"),
 ];
 
-// Login route
+// Auth routes
 router.post("/login", loginValidation, login);
-// Registration route
 router.post("/register", registerValidation, register);
 
-// Middleware to validate request body
-router.use((req, res, next) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
-  }
-  next();
-});
-// Middleware to authenticate JWT token
-router.use((req, res, next) => {
-  const token = req.headers.authorization?.split(" ")[1];
-  if (!token) {
-    return res.status(401).json({ message: "No token provided" });
-  }
-  jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
-    if (err) {
-      return res.status(403).json({ message: "Invalid token" });
-    }
-    req.user = decoded;
-    next();
+// Token verification route
+router.get("/verify", protect, (req, res) => {
+  res.status(200).json({
+    success: true,
+    data: {
+      user: {
+        id: req.user._id,
+        username: req.user.username,
+        email: req.user.email,
+        role: req.user.role,
+      },
+    },
   });
 });
-// Middleware to authorize user roles
-router.use((req, res, next) => {
-  const allowedRoles = ["admin", "teacher", "student"];
-  if (!allowedRoles.includes(req.user.role)) {
-    return res.status(403).json({ message: "Access denied" });
-  }
-  next();
-});
-// Export the router
+
 module.exports = router;
