@@ -8,18 +8,18 @@ import {
   type ReactNode,
 } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 interface User {
   id: string;
   email: string;
   username: string;
-  role: "admin" | "student" | "Teacher";
-  token: string;
+  role: string;
 }
 
 interface AuthContextType {
   user: User | null;
-  login: (user: User) => void;
+  login: (userData: { user: User; token: string }) => void;
   logout: () => void;
   loading: boolean;
 }
@@ -32,22 +32,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
-    // Check for stored user session
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
-    setLoading(false);
+    const initializeAuth = () => {
+      try {
+        const storedUser = localStorage.getItem("user");
+        const token = localStorage.getItem("token");
+
+        if (storedUser && token) {
+          setUser(JSON.parse(storedUser));
+        }
+      } catch (error) {
+        console.error("Auth initialization error:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initializeAuth();
   }, []);
 
-  const login = (userData: User) => {
-    setUser(userData);
-    localStorage.setItem("user", JSON.stringify(userData));
+  const login = (userData: { user: User; token: string }) => {
+    try {
+      localStorage.setItem("token", userData.token);
+      localStorage.setItem("user", JSON.stringify(userData.user));
+      setUser(userData.user);
+      console.log("User logged in:", userData.user);
+    } catch (error) {
+      console.error("Login error:", error);
+      toast.error("Failed to save auth data");
+    }
   };
 
   const logout = () => {
-    setUser(null);
+    localStorage.removeItem("token");
     localStorage.removeItem("user");
+    setUser(null);
     router.push("/login");
   };
 
