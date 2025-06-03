@@ -7,7 +7,7 @@ export interface Room {
   faculty: Faculty[];
   year: number;
   department: string; // Corrected spelling from 'depertment' to 'department'
-
+  code: string;
   semester: 1 | 2;
   createdAt: string;
   updatedAt: string;
@@ -20,8 +20,15 @@ interface Subject {
   code: string;
 }
 
-interface Faculty {
+export interface Faculty {
   _id: string;
   name: string;
   department: string;
+  availability: TimeSlot[];
+}
+
+export interface TimeSlot {
+  day: 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday';
+  startTime: string;
+  endTime: string;
 }
