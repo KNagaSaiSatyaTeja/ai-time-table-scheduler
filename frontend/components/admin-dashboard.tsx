@@ -15,7 +15,7 @@ import Layout from "./layout";
 import { TimetableManagement } from "./timetable-management";
 import { FacultyManagement } from "./faculty-management";
 import { UserManagement } from "./user-management";
-import { SubjectManagement } from "./subject-management";
+
 import { RoomManagement } from "./room-management";
 import { ThemeToggle } from "./theme-toggle";
 import { UserNav } from "./user-nav";
@@ -31,6 +31,7 @@ export function AdminDashboard() {
   const [activities, setActivities] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const theme = localStorage.getItem("theme") || "light";
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -80,7 +81,9 @@ export function AdminDashboard() {
   const handleManageUsers = () => {
     setActiveTab("users");
   };
-
+  useEffect(() => {
+    const theme = localStorage.getItem("theme") || "light";
+  }, [theme]);
   return (
     <Layout>
       <div className="page-container">
@@ -104,8 +107,18 @@ export function AdminDashboard() {
             className="space-y-6"
           >
             <div className="border-b">
-              <div className="overflow-x-auto">
-                <TabsList className="inline-flex w-full h-10 items-center justify-start p-1 gap-1 md:gap-2">
+              <div
+                className={`overflow-x-auto ${
+                  theme === "dark" ? "bg-[#0f0f0f]" : "bg-white"
+                }`}
+              >
+                {" "}
+                {/* or bg-gray-900 or bg-neutral-900 */}
+                <TabsList
+                  className={`inline-flex w-full h-10 items-center justify-start p-1 gap-1 md:gap-2 ${
+                    theme === "dark" ? "bg-[#0f0f0f]" : "bg-white"
+                  }`}
+                >
                   <TabsTrigger
                     value="overview"
                     className="flex-1 min-w-[100px] max-w-[150px] px-3"
@@ -123,12 +136,6 @@ export function AdminDashboard() {
                     className="flex-1 min-w-[100px] max-w-[150px] px-3"
                   >
                     Faculty
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="subjects"
-                    className="flex-1 min-w-[100px] max-w-[150px] px-3"
-                  >
-                    Subjects
                   </TabsTrigger>
                   <TabsTrigger
                     value="rooms"
@@ -270,10 +277,6 @@ export function AdminDashboard() {
 
             <TabsContent value="faculty">
               <FacultyManagement />
-            </TabsContent>
-
-            <TabsContent value="subjects">
-              <SubjectManagement />
             </TabsContent>
 
             <TabsContent value="rooms">
