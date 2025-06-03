@@ -130,19 +130,19 @@ export function RoomModal({
       const method = room ? "put" : "post";
 
       const response =
-       method === "put"
-        ? await axios.put(endpoint, formData, {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-          })
-        : await axios.post(endpoint, formData, {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-          });
+        method === "put"
+          ? await axios.put(endpoint, formData, {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+              },
+            })
+          : await axios.post(endpoint, formData, {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+              },
+            });
     } catch (error: any) {
       const errorMessage =
         error.response?.data?.message || "Failed to save room";
@@ -155,16 +155,7 @@ export function RoomModal({
 
   // Add function to refresh subjects after new subject is added
   const handleSubjectAdded = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      const response = await axios.get("http://localhost:5000/api/subjects", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setSubjects(response.data.data);
-    } catch (error) {
-      console.error("Failed to refresh subjects:", error);
-      toast.error("Failed to refresh subjects list");
-    }
+
   };
 
   return (
