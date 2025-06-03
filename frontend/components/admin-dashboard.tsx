@@ -35,36 +35,33 @@ export function AdminDashboard() {
 
   useEffect(() => {
     const fetchDashboardData = async () => {
-      try {
-        setLoading(true);
-        const [statsResponse, activitiesResponse] = await Promise.all([
-          axios.get("http://localhost:5000/api/stats", {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
-            },
-          }),
-          axios.get("http://localhost:5000/api/stats/recent-activity", {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
-            },
-          }),
-        ]);
-
-        if (statsResponse.status !== 200 || activitiesResponse.status !== 200) {
-          throw new Error("Failed to fetch dashboard data");
-        }
-
-        const statsData = statsResponse.data;
-        const activitiesData = activitiesResponse.data;
-
-        setStats(statsData.data);
-        setActivities(activitiesData.data);
-      } catch (err: any) {
-        console.error("Error fetching dashboard data:", err);
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
+      // try {
+      //   setLoading(true);
+      //   const [statsResponse, activitiesResponse] = await Promise.all([
+      //     axios.get("http://localhost:5000/api/stats", {
+      //       headers: {
+      //         Authorization: `Bearer ${localStorage.getItem("token")}`,
+      //       },
+      //     }),
+      //     axios.get("http://localhost:5000/api/stats/recent-activity", {
+      //       headers: {
+      //         Authorization: `Bearer ${localStorage.getItem("token")}`,
+      //       },
+      //     }),
+      //   ]);
+      //   if (statsResponse.status !== 200 || activitiesResponse.status !== 200) {
+      //     throw new Error("Failed to fetch dashboard data");
+      //   }
+      //   const statsData = statsResponse.data;
+      //   const activitiesData = activitiesResponse.data;
+      //   setStats(statsData.data);
+      //   setActivities(activitiesData.data);
+      // } catch (err: any) {
+      //   console.error("Error fetching dashboard data:", err);
+      //   setError(err.message);
+      // } finally {
+      //   setLoading(false);
+      // }
     };
 
     fetchDashboardData();
