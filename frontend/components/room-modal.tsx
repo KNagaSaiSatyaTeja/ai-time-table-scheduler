@@ -20,10 +20,11 @@ import {
 import { Room } from "@/types/room";
 import axios from "axios";
 import { toast } from "sonner";
-import { X, Plus } from "lucide-react";
+import { X, Plus, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "./ui/checkbox";
-
+import { ScrollArea } from "./ui/scroll-area";
+import { SubjectModel } from "./subject-model";
 interface RoomModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -59,21 +60,37 @@ export function RoomModal({
     faculty: [],
   });
 
-  const [selectedSubject, setSelectedSubject] = useState("");
   const [loading, setLoading] = useState(false);
+  const [subjects, setSubjects] = useState([]);
+  const [faculty, setFaculty] = useState([]);
+  const [isSubjectModalOpen, setIsSubjectModalOpen] = useState(false);
 
-  const [subjects, setSubjects] = useState([
-    { id: "1", name: "Mathematics", code: "MTH" },
-    { id: "2", name: "Physics", code: "PHY" },
-  ]);
+  // Fetch subjects and faculty on component mount
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const [subjectsRes, facultyRes] = await Promise.all([
+          axios.get("http://localhost:5000/api/subjects", {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          axios.get("http://localhost:5000/api/faculty", {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+        ]);
 
-  const facultyOptions: { _id: string; name: string; department: string }[] = [
-    { _id: "f1", name: "Dr. Smith", department: "CS" },
-    { _id: "f2", name: "Prof. Johnson", department: "Math" },
-    { _id: "f3", name: "Dr. Lee", department: "Physics" },
-    { _id: "f4", name: "Prof. Adams", department: "CS" },
-  ];
+        setSubjects(subjectsRes.data.data);
+        setFaculty(facultyRes.data.data);
+      } catch (error) {
+        console.error("Failed to fetch data:", error);
+        toast.error("Failed to load subjects and faculty");
+      }
+    };
 
+    fetchData();
+  }, []);
+
+  // Initialize form data when room prop changes
   useEffect(() => {
     if (room) {
       setFormData({
@@ -82,9 +99,9 @@ export function RoomModal({
         capacity: room.capacity,
         year: room.year,
         semester: room.semester,
-        subjects: room.subjects?.map((subject) => subject.id) || [],
+        subjects: room.subjects?.map((subject) => subject._id) || [],
         department: room.department || "",
-        faculty: room.faculty?.map((faculty) => faculty._id) || [],
+        faculty: room.faculty?.map((f) => f._id) || [],
       });
     } else {
       setFormData({
@@ -100,226 +117,280 @@ export function RoomModal({
     }
   }, [room]);
 
-  const handleAddSubject = () => {
-    if (selectedSubject && !formData.subjects.includes(selectedSubject)) {
-      setFormData({
-        ...formData,
-        subjects: [...formData.subjects, selectedSubject],
-      });
-      setSelectedSubject("");
-    }
-  };
-
-  const handleRemoveSubject = (subjectToRemove: string) => {
-    setFormData({
-      ...formData,
-      subjects: formData.subjects.filter(
-        (subject) => subject !== subjectToRemove
-      ),
-    });
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     const token = localStorage.getItem("token");
 
     try {
-      if (room) {
-        await axios.put(
-          `http://localhost:5000/api/rooms/${room._id}`,
-          formData,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-          }
+      const endpoint = room
+        ? `http://localhost:5000/api/rooms/${room._id}`
+        : "http://localhost:5000/api/rooms";
+
+      const method = room ? "put" : "post";
+
+      const response = await axios[method](endpoint, formData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (response.data.success) {
+        toast.success(
+          room ? "Room updated successfully" : "Room added successfully"
         );
-        toast.success("Room updated successfully");
-      } else {
-        await axios.post("http://localhost:5000/api/rooms/addRoom", formData, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        });
-        toast.success("Room added successfully");
+        onSuccess();
+        onClose();
       }
-      onSuccess();
-      onClose();
     } catch (error: any) {
-      toast.error(error.response?.data?.message || "Failed to save room");
+      const errorMessage =
+        error.response?.data?.message || "Failed to save room";
+      toast.error(errorMessage);
       console.error("Room save error:", error);
     } finally {
       setLoading(false);
     }
   };
 
+  // Add function to refresh subjects after new subject is added
+  const handleSubjectAdded = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.get("http://localhost:5000/api/subjects", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setSubjects(response.data.data);
+    } catch (error) {
+      console.error("Failed to refresh subjects:", error);
+      toast.error("Failed to refresh subjects list");
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto w-full max-w-3xl">
-        <DialogHeader>
-          <DialogTitle>{room ? "Edit Room" : "Add New Room"}</DialogTitle>
+      <DialogContent className="max-w-[95vw] md:max-w-[85vw] lg:max-w-[800px] max-h-[90vh] overflow-hidden">
+        <DialogHeader className="px-6 py-4 border-b">
+          <DialogTitle className="text-xl font-semibold">
+            {room ? "Edit Room" : "Add New Room"}
+          </DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4 px-2 sm:px-4 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Room Name</Label>
-            <Input
-              id="name"
-              value={formData.name}
-              onChange={(e) =>
-                setFormData({ ...formData, name: e.target.value })
-              }
-              required
-            />
-          </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="building">Building</Label>
-            <Input
-              id="building"
-              value={formData.building}
-              onChange={(e) =>
-                setFormData({ ...formData, building: e.target.value })
-              }
-              required
-            />
-          </div>
+        <ScrollArea className="flex-1 p-6 h-[calc(90vh-180px)]">
+          <form id="room-form" onSubmit={handleSubmit} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-3">
+                <Label htmlFor="name" className="text-sm font-medium">
+                  Room Name
+                </Label>
+                <Input
+                  id="name"
+                  placeholder="Enter room name"
+                  className="w-full"
+                  value={formData.name}
+                  onChange={(e) =>
+                    setFormData({ ...formData, name: e.target.value })
+                  }
+                  required
+                />
+              </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="department">Department</Label>
-            <Input
-              id="department"
-              value={formData.department}
-              onChange={(e) =>
-                setFormData({ ...formData, department: e.target.value })
-              }
-              required
-            />
-          </div>
+              <div className="space-y-3">
+                <Label htmlFor="building" className="text-sm font-medium">
+                  Building
+                </Label>
+                <Input
+                  id="building"
+                  placeholder="Enter building name"
+                  className="w-full"
+                  value={formData.building}
+                  onChange={(e) =>
+                    setFormData({ ...formData, building: e.target.value })
+                  }
+                  required
+                />
+              </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="capacity">Capacity</Label>
-            <Input
-              id="capacity"
-              type="number"
-              min="1"
-              value={formData.capacity}
-              onChange={(e) =>
-                setFormData({ ...formData, capacity: parseInt(e.target.value) })
-              }
-              required
-            />
-          </div>
+              <div className="space-y-3">
+                <Label htmlFor="department" className="text-sm font-medium">
+                  Department
+                </Label>
+                <Input
+                  id="department"
+                  placeholder="Enter department name"
+                  className="w-full"
+                  value={formData.department}
+                  onChange={(e) =>
+                    setFormData({ ...formData, department: e.target.value })
+                  }
+                  required
+                />
+              </div>
 
-          <div className="space-y-2">
-            <Label>Subjects</Label>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 max-h-48 overflow-auto border rounded p-2">
-              {subjects.map((subject) => (
-                <div key={subject.id} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={subject.id}
-                    checked={formData.subjects.includes(subject.id)}
-                    onCheckedChange={(checked) => {
-                      setFormData((prev) => {
-                        const newSubjects = checked
-                          ? [...prev.subjects, subject.id]
-                          : prev.subjects.filter((id) => id !== subject.id);
-                        return { ...prev, subjects: newSubjects };
-                      });
-                    }}
-                  />
-                  <label
-                    htmlFor={subject.id}
-                    className="text-sm font-medium leading-none"
-                  >
-                    {subject.name} ({subject.code})
-                  </label>
+              <div className="space-y-3">
+                <Label htmlFor="capacity" className="text-sm font-medium">
+                  Capacity
+                </Label>
+                <Input
+                  id="capacity"
+                  type="number"
+                  placeholder="Enter room capacity"
+                  className="w-full"
+                  min="1"
+                  value={formData.capacity || ""}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      capacity: parseInt(e.target.value),
+                    })
+                  }
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <Label className="text-sm font-medium">Subjects</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsSubjectModalOpen(true)}
+                  className="h-8 px-3"
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add Subject
+                </Button>
+              </div>
+              <div className="border rounded-lg">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 p-4 max-h-[200px] overflow-y-auto">
+                  {subjects.map((subject: any) => (
+                    <div
+                      key={subject._id}
+                      className="flex items-center space-x-2"
+                    >
+                      <Checkbox
+                        id={`subject-${subject._id}`}
+                        checked={formData.subjects.includes(subject._id)}
+                        onCheckedChange={(checked) => {
+                          setFormData((prev) => ({
+                            ...prev,
+                            subjects: checked
+                              ? [...prev.subjects, subject._id]
+                              : prev.subjects.filter(
+                                  (id) => id !== subject._id
+                                ),
+                          }));
+                        }}
+                      />
+                      <Label
+                        htmlFor={`subject-${subject._id}`}
+                        className="text-sm cursor-pointer"
+                      >
+                        {subject.name} ({subject.code})
+                      </Label>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              </div>
             </div>
-          </div>
 
-          <div className="space-y-2">
-            <Label>Faculty</Label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-              {facultyOptions.map((faculty) => (
-                <div key={faculty._id} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={faculty._id}
-                    checked={formData.faculty?.includes(faculty._id) ?? false}
-                    onCheckedChange={(checked) => {
-                      setFormData((prev) => {
-                        const newFaculty = checked
-                          ? [...(prev.faculty ?? []), faculty._id]
-                          : (prev.faculty ?? []).filter(
-                              (id) => id !== faculty._id
-                            );
-                        return { ...prev, faculty: newFaculty };
-                      });
-                    }}
-                  />
-                  <label
-                    htmlFor={faculty._id}
-                    className="text-sm font-medium leading-none"
-                  >
-                    {faculty.name}
-                  </label>
+            <div className="space-y-3">
+              <Label className="text-sm font-medium">Faculty</Label>
+              <div className="border rounded-lg">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 p-4 max-h-[200px] overflow-y-auto">
+                  {faculty.map((f: any) => (
+                    <div key={f._id} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`faculty-${f._id}`}
+                        checked={formData.faculty?.includes(f._id)}
+                        onCheckedChange={(checked) => {
+                          setFormData((prev) => ({
+                            ...prev,
+                            faculty: checked
+                              ? [...(prev.faculty || []), f._id]
+                              : (prev.faculty || []).filter(
+                                  (id) => id !== f._id
+                                ),
+                          }));
+                        }}
+                      />
+                      <label htmlFor={`faculty-${f._id}`} className="text-sm">
+                        {f.name}
+                      </label>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              </div>
             </div>
-          </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Year</Label>
-              <Select
-                value={formData.year.toString()}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, year: parseInt(value) })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="1">First Year</SelectItem>
-                  <SelectItem value="2">Second Year</SelectItem>
-                  <SelectItem value="3">Third Year</SelectItem>
-                  <SelectItem value="4">Fourth Year</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label>Year</Label>
+                <Select
+                  value={formData.year.toString()}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, year: parseInt(value) })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[1, 2, 3, 4].map((year) => (
+                      <SelectItem key={year} value={year.toString()}>
+                        Year {year}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Semester</Label>
+                <Select
+                  value={formData.semester.toString()}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, semester: parseInt(value) })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">First Semester</SelectItem>
+                    <SelectItem value="2">Second Semester</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label>Semester</Label>
-              <Select
-                value={formData.semester.toString()}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, semester: parseInt(value) })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="1">First Semester</SelectItem>
-                  <SelectItem value="2">Second Semester</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+          </form>
+        </ScrollArea>
 
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? "Saving..." : room ? "Update" : "Add"}
-            </Button>
-          </div>
-        </form>
+        <div className="flex justify-end gap-3 px-6 py-4 border-t bg-background">
+          <Button type="button" variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button type="submit" form="room-form" disabled={loading}>
+            {loading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                {room ? "Updating..." : "Adding..."}
+              </>
+            ) : room ? (
+              "Update"
+            ) : (
+              "Add"
+            )}
+          </Button>
+        </div>
       </DialogContent>
+
+      <SubjectModel
+        isOpen={isSubjectModalOpen}
+        onClose={() => setIsSubjectModalOpen(false)}
+        onSuccess={handleSubjectAdded}
+      />
     </Dialog>
   );
 }
