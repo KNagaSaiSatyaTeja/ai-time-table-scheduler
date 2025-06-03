@@ -19,7 +19,7 @@ import { UserManagement } from "./user-management";
 import { RoomManagement } from "./room-management";
 import { ThemeToggle } from "./theme-toggle";
 import { UserNav } from "./user-nav";
-
+import axios from "axios";
 export function AdminDashboard() {
   const [activeTab, setActiveTab] = useState("overview");
   const [stats, setStats] = useState({
@@ -38,24 +38,24 @@ export function AdminDashboard() {
       try {
         setLoading(true);
         const [statsResponse, activitiesResponse] = await Promise.all([
-          fetch("http://localhost:5000/api/stats", {
+          axios.get("http://localhost:5000/api/stats", {
             headers: {
               Authorization: `Bearer ${localStorage.getItem("token")}`,
             },
           }),
-          fetch("http://localhost:5000/api/stats/recent-activity", {
+          axios.get("http://localhost:5000/api/stats/recent-activity", {
             headers: {
               Authorization: `Bearer ${localStorage.getItem("token")}`,
             },
           }),
         ]);
 
-        if (!statsResponse.ok || !activitiesResponse.ok) {
+        if (statsResponse.status !== 200 || activitiesResponse.status !== 200) {
           throw new Error("Failed to fetch dashboard data");
         }
 
-        const statsData = await statsResponse.json();
-        const activitiesData = await activitiesResponse.json();
+        const statsData = statsResponse.data;
+        const activitiesData = activitiesResponse.data;
 
         setStats(statsData.data);
         setActivities(activitiesData.data);
