@@ -129,20 +129,20 @@ export function RoomModal({
 
       const method = room ? "put" : "post";
 
-      const response = await axios[method](endpoint, formData, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      });
-
-      if (response.data.success) {
-        toast.success(
-          room ? "Room updated successfully" : "Room added successfully"
-        );
-        onSuccess();
-        onClose();
-      }
+      const response =
+       method === "put"
+        ? await axios.put(endpoint, formData, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          })
+        : await axios.post(endpoint, formData, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          });
     } catch (error: any) {
       const errorMessage =
         error.response?.data?.message || "Failed to save room";
