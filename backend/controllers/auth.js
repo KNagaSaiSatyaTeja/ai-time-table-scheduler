@@ -3,7 +3,7 @@ const bcrypt = require("bcrypt");
 const User = require("../models/users");
 const { validationResult } = require("express-validator");
 
-exports.login = async (req, res) => {
+const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
@@ -66,7 +66,7 @@ exports.login = async (req, res) => {
   }
 };
 
-exports.register = async (req, res) => {
+const register = async (req, res) => {
   try {
     // Validate request
     const errors = validationResult(req);
@@ -129,7 +129,7 @@ exports.register = async (req, res) => {
   }
 };
 
-exports.toggleUserStatus = async (req, res) => {
+const toggleUserStatus = async (req, res) => {
   try {
     const { userId } = req.params;
     const user = await User.findById(userId);
@@ -161,4 +161,10 @@ exports.toggleUserStatus = async (req, res) => {
       message: "Failed to toggle user status",
     });
   }
+};
+
+module.exports = {
+  login,
+  register,
+  toggleUserStatus,
 };
