@@ -5,6 +5,7 @@ import { AdminDashboard } from "@/components/admin-dashboard";
 import { UserDashboard } from "@/components/user-dashboard";
 import { ProtectedRoute } from "@/components/protected-route";
 import { Loader2 } from "lucide-react";
+import { useEffect } from "react";
 
 export default function DashboardPage() {
   const { user, loading } = useAuth();
@@ -16,7 +17,10 @@ export default function DashboardPage() {
       </div>
     );
   }
-
+  useEffect(() => {
+    let user = JSON.parse(localStorage.getItem("user") || "{}");
+    console.log("User in DashboardPage:", user);
+  }, []);
   return (
     <ProtectedRoute>
       {user?.role === "admin" ? <AdminDashboard /> : <UserDashboard />}

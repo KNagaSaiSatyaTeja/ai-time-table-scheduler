@@ -38,10 +38,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const token = localStorage.getItem("token");
 
         if (storedUser && token) {
-          setUser(JSON.parse(storedUser));
+          const parsedUser = JSON.parse(storedUser);
+          if (parsedUser?.role) {
+            setUser(parsedUser);
+            console.log("✅ Auth initialized with user:", parsedUser);
+          } else {
+            console.warn("⚠️ Invalid user data in localStorage:", parsedUser);
+          }
+        } else {
+          console.log("🔒 No auth data in localStorage.");
         }
       } catch (error) {
-        console.error("Auth initialization error:", error);
+        console.error("❌ Auth initialization error:", error);
+        toast.error("Session initialization failed");
       } finally {
         setLoading(false);
       }
@@ -52,28 +61,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = (userData: { user: User; token: string }) => {
     try {
+      console.log("🔐 Login with:", userData);
       localStorage.setItem("token", userData.token);
       localStorage.setItem("user", JSON.stringify(userData.user));
       setUser(userData.user);
-      console.log("User logged in:", userData.user);
+      toast.success(`Welcome back, ${userData.user.username}!`);
     } catch (error) {
-      console.error("Login error:", error);
+      console.error("❌ Login error:", error);
       toast.error("Failed to save auth data");
     }
   };
 
   const logout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    setUser(null);
-    router.push("/login");
+    try {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      setUser(null);
+      router.push("/login");
+      toast.success("Logged out successfully");
+    } catch (error) {
+      console.error("❌ Logout error:", error);
+      toast.error("Failed to logout");
+    }
   };
 
-  return (
-    <AuthContext.Provider value={{ user, login, logout, loading }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  const value = {
+    user,
+    login,
+    logout,
+    loading,
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {
