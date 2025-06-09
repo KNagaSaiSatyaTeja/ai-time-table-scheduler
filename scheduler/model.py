@@ -1,6 +1,5 @@
-# model.py
 from dataclasses import dataclass
-from typing import List
+from typing import List, Dict, Any
 
 @dataclass
 class TimeSlot:
@@ -23,12 +22,14 @@ class Faculty:
 @dataclass
 class Subject:
     name: str
-    duration: int  # Deprecated, mapped to time for backward compatibility
     time: int  # Duration in minutes (e.g., 50)
     no_of_classes_per_week: int  # Number of classes required per week
     faculty: List[Faculty]
+    duration: int = None  # Optional, for backward compatibility
 
     def __post_init__(self):
+        if self.duration is None:
+            self.duration = self.time
         if not hasattr(self, 'time') or self.time is None:
             self.time = self.duration
         if not hasattr(self, 'no_of_classes_per_week'):
@@ -49,8 +50,8 @@ class ScheduleAssignment:
     endTime: str
     room_id: str
 
-    def model_dump(self):
-        # Updated to return all fields for compatibility with SchedulerService
+    def model_dump(self) -> Dict[str, Any]:
+        """Return all fields as a dictionary for compatibility with SchedulerService."""
         return {
             "subject_name": self.subject_name,
             "faculty_id": self.faculty_id,

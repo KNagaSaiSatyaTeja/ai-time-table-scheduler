@@ -1,4 +1,3 @@
-# genetic_algorithm.py
 import random
 from typing import List, Callable, Tuple
 import deap.base
@@ -6,7 +5,12 @@ import deap.creator
 import deap.tools
 from collections import defaultdict
 from model import ScheduleInput, ScheduleAssignment, TimeSlot
-from utils import check_time_conflict, check_break_conflict, time_to_minutes 
+from utils import check_time_conflict, check_break_conflict, time_to_minutes
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 # Define the fitness and individual types for DEAP
 deap.creator.create("FitnessMin", deap.base.Fitness, weights=(-1.0,))
@@ -30,10 +34,10 @@ class GeneticAlgorithm:
         for slot in self.fixed_slots:
             slot_obj = TimeSlot(day=slot.day, startTime=slot.startTime, endTime=slot.endTime)
             if check_break_conflict(slot_obj, self.input_data.break_):
-                print(f"[INFO] Excluding slot {slot.day} {slot.startTime}-{slot.endTime} due to break conflict")
+                logger.debug(f"Excluding slot {slot.day} {slot.startTime}-{slot.endTime} due to break conflict")
                 continue
             assignable_slots.append(slot)
-        print(f"[INFO] Total assignable slots: {len(assignable_slots)}")
+        logger.info(f"Total assignable slots: {len(assignable_slots)}")
         return assignable_slots
 
     def _get_slot_duration(self, slot: TimeSlot) -> int:
@@ -41,12 +45,11 @@ class GeneticAlgorithm:
         try:
             slot_duration = time_to_minutes(slot.endTime) - time_to_minutes(slot.startTime)
             if slot_duration <= 0:
-                print(f"[ERROR] Invalid slot duration for {slot.day} {slot.startTime}-{slot.endTime}: {slot_duration} minutes")
+                logger.error(f"Invalid slot duration for {slot.day} {slot.startTime}-{slot.endTime}: {slot_duration} minutes")
                 return -1
-            print(f"[DEBUG] Slot duration for {slot.day} {slot.startTime}-{slot.endTime}: {slot_duration} minutes")
             return slot_duration
         except ValueError as e:
-            print(f"[ERROR] Failed to calculate slot duration for {slot.day} {slot.startTime}-{slot.endTime}: {e}")
+            logger.error(f"Failed to calculate slot duration for {slot.day} {slot.startTime}-{slot.endTime}: {e}")
             return -1
 
     def _create_individual(self) -> List[ScheduleAssignment]:
@@ -78,17 +81,14 @@ class GeneticAlgorithm:
                                 avail_end = time_to_minutes(avail.endTime)
                                 slot_start = time_to_minutes(slot.startTime)
                                 slot_end = time_to_minutes(slot.endTime)
-                                print(f"[DEBUG] Checking slot {slot.day} {slot.startTime}-{slot.endTime} against availability {avail.startTime}-{avail.endTime}")
                                 if avail_start <= slot_start and slot_end <= avail_end:
                                     valid_slots.append(slot)
-                                    print(f"[DEBUG] Valid slot for {subject.name}: {slot.day} {slot.startTime}-{slot.endTime}")
                                     break
                             except ValueError as e:
-                                print(f"[ERROR] Time parsing error in _create_individual for faculty {faculty.id}: {e}")
+                                logger.error(f"Time parsing error in _create_individual for faculty {faculty.id}: {e}")
                                 continue
 
                 if not valid_slots:
-                    print(f"[DEBUG] No valid slots for {subject.name} with faculty {faculty.name}")
                     continue
 
                 for slot in random.sample(valid_slots, len(valid_slots)):
@@ -112,13 +112,13 @@ class GeneticAlgorithm:
                     used_slots_per_room[self.fixed_room_id].append(slot)
                     subject_counts[subject.name] += 1
                     assigned = True
-                    print(f"[SUCCESS] Assigned {subject.name} to {faculty.name} at {slot.day} {slot.startTime}-{slot.endTime}")
+                    logger.debug(f"Assigned {subject.name} to {faculty.name} at {slot.day} {slot.startTime}-{slot.endTime}")
                     break
                 if assigned:
                     break
 
             if not assigned:
-                print(f"[WARN] Could not assign subject: {subject.name}")
+                logger.warning(f"Could not assign subject: {subject.name}")
 
         # Step 2: Fill all remaining slots, ignoring subject count limits
         used_slots = set((a.day, a.startTime, a.endTime) for a in schedule)
@@ -134,7 +134,6 @@ class GeneticAlgorithm:
                 continue
             subjects_to_consider = [s for s in remaining_subjects if s.time == slot_duration]
             if not subjects_to_consider:
-                print(f"[WARN] No subjects available to fill slot {slot.day} {slot.startTime}-{slot.endTime}")
                 continue
 
             assigned = False
@@ -152,7 +151,7 @@ class GeneticAlgorithm:
                                     valid_slot = True
                                     break
                             except ValueError as e:
-                                print(f"[ERROR] Time parsing error in _create_individual for faculty {faculty.id}: {e}")
+                                logger.error(f"Time parsing error in _create_individual for faculty {faculty.id}: {e}")
                                 continue
 
                     if not valid_slot:
@@ -178,15 +177,11 @@ class GeneticAlgorithm:
                     used_slots_per_room[self.fixed_room_id].append(slot)
                     subject_counts[subject.name] = subject_counts.get(subject.name, 0) + 1
                     assigned = True
-                    print(f"[SUCCESS] Filled remaining slot {slot.day} {slot.startTime}-{slot.endTime} with {subject.name} by {faculty.name}")
                     break
                 if assigned:
                     break
 
-            if not assigned:
-                print(f"[WARN] Could not fill remaining slot {slot.day} {slot.startTime}-{slot.endTime}")
-
-        print(f"[INFO] Individual created with {len(schedule)} assignments")
+        logger.info(f"Individual created with {len(schedule)} assignments")
         return schedule
 
     def _setup_ga(self):
@@ -218,15 +213,12 @@ class GeneticAlgorithm:
             slot = TimeSlot(day=a.day, startTime=a.startTime, endTime=a.endTime)
             if check_break_conflict(slot, self.input_data.break_):
                 conflicts += 1
-                print(f"[DEBUG] Break conflict detected for {a.subject_name} at {a.day} {a.startTime}-{a.endTime}")
             for existing_slot in used_slots_per_faculty[a.faculty_id]:
                 if slot.day == existing_slot.day and check_time_conflict(slot, existing_slot):
                     conflicts += 1
-                    print(f"[DEBUG] Faculty conflict for {a.faculty_id} at {a.day} {a.startTime}-{a.endTime}")
             for existing_slot in used_slots_per_room[a.room_id]:
                 if slot.day == existing_slot.day and check_time_conflict(slot, existing_slot):
                     conflicts += 1
-                    print(f"[DEBUG] Room conflict for {a.room_id} at {a.day} {a.startTime}-{a.endTime}")
             used_slots_per_faculty[a.faculty_id].append(slot)
             used_slots_per_room[a.room_id].append(slot)
 
@@ -235,7 +227,6 @@ class GeneticAlgorithm:
         unfilled_penalty = unfilled_slots * 5000
 
         fitness = class_requirement_penalty + (conflicts * 100) + unfilled_penalty
-        print(f"[DEBUG] Fitness: {fitness} (class penalty: {class_requirement_penalty}, conflicts: {conflicts}, unfilled slots: {unfilled_slots})")
         return (fitness,)
 
     def _valid_population(self, n):
@@ -249,9 +240,9 @@ class GeneticAlgorithm:
                 pop.append(individual)
             attempts += 1
             if attempts % 100 == 0:
-                print(f"[INFO] Tried {attempts} individuals, population size: {len(pop)}")
+                logger.info(f"Tried {attempts} individuals, population size: {len(pop)}")
         if len(pop) < n:
-            print(f"[WARN] Could only generate {len(pop)} individuals out of {n} requested")
+            logger.warning(f"Could only generate {len(pop)} individuals out of {n} requested")
         return pop
 
     def _crossover(self, ind1, ind2):
@@ -312,7 +303,6 @@ class GeneticAlgorithm:
 
         ind1[:] = new_ind1
         ind2[:] = new_ind2
-        print(f"[INFO] Crossover performed: ind1={len(ind1)} assignments, ind2={len(ind2)} assignments")
         return ind1, ind2
 
     def _mutate(self, individual, indpb):
@@ -354,13 +344,11 @@ class GeneticAlgorithm:
                                     avail_end = time_to_minutes(avail.endTime)
                                     slot_start = time_to_minutes(slot.startTime)
                                     slot_end = time_to_minutes(slot.endTime)
-                                    print(f"[DEBUG] Checking slot {slot.day} {slot.startTime}-{slot.endTime} against availability {avail.startTime}-{avail.endTime} in _mutate")
                                     if avail_start <= slot_start and slot_end <= avail_end:
                                         valid_slots.append(slot)
-                                        print(f"[DEBUG] Valid slot for mutation of {subject.name}: {slot.day} {slot.startTime}-{slot.endTime}")
                                         break
                                 except ValueError as e:
-                                    print(f"[ERROR] Time parsing error in _mutate for faculty {faculty.id}: {e}")
+                                    logger.error(f"Time parsing error in _mutate for faculty {faculty.id}: {e}")
                                     continue
 
                     for slot in random.sample(valid_slots, len(valid_slots)):
@@ -381,28 +369,27 @@ class GeneticAlgorithm:
                         used_slots_per_faculty[faculty.id].append(slot)
                         used_slots_per_room[self.fixed_room_id].append(slot)
                         assigned = True
-                        print(f"[SUCCESS] Mutated {subject.name} to {faculty.name} at {slot.day} {slot.startTime}-{slot.endTime}")
                         break
                     if assigned:
                         break
 
                 if not assigned:
-                    print(f"[WARN] Could not mutate assignment for {subject.name} at index {i}")
+                    logger.warning(f"Could not mutate assignment for {subject.name} at index {i}")
 
         return individual,
 
     def run(self) -> Tuple[List[ScheduleAssignment], float]:
         """Run the genetic algorithm to generate an optimized schedule."""
-        print("[INFO] Starting Genetic Algorithm...")
+        logger.info("Starting Genetic Algorithm...")
         pop = self.toolbox.population(n=self.pop_size)
-        print(f"[INFO] Initial population created: {len(pop)} individuals")
+        logger.info(f"Initial population created: {len(pop)} individuals")
 
         fitnesses = list(map(self.toolbox.evaluate, pop))
         for ind, fit in zip(pop, fitnesses):
             ind.fitness.values = fit
 
         for gen in range(self.generations):
-            print(f"[INFO] Generation {gen+1}/{self.generations}")
+            logger.info(f"Generation {gen+1}/{self.generations}")
             offspring = self.toolbox.select(pop, len(pop))
             offspring = list(map(self.toolbox.clone, offspring))
 
@@ -425,5 +412,5 @@ class GeneticAlgorithm:
             pop[:] = deap.tools.selBest(pop + offspring, k=self.pop_size)
 
         best = deap.tools.selBest(pop, k=1)[0]
-        print("[INFO] Genetic Algorithm completed.")
+        logger.info("Genetic Algorithm completed.")
         return best, best.fitness.values[0]
