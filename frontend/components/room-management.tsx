@@ -26,7 +26,7 @@ import { Room } from "@/types/room";
 import { RoomModal } from "./room-modal";
 
 export function RoomManagement() {
-  const [rooms, setRooms] = useState<Room[]>([]);
+  const [rooms, setRooms] = useState<Room[]>([]); // Initialize with empty array
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingRoom, setEditingRoom] = useState<Room | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -37,15 +37,17 @@ export function RoomManagement() {
   }, []);
 
   const fetchRooms = async () => {
+    setLoading(true);
     try {
       const response = await axios.get("http://localhost:5000/api/rooms", {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
       });
-      setRooms(response.data.data);
+      setRooms(response.data.data || []); // Ensure we set an empty array if data is undefined
     } catch (error) {
       toast.error("Failed to fetch rooms");
+      setRooms([]); // Set empty array on error
     } finally {
       setLoading(false);
     }
@@ -115,67 +117,77 @@ export function RoomManagement() {
             </Button>
           </div>
 
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Building</TableHead>
-                <TableHead>Capacity</TableHead>
-                <TableHead>Year</TableHead>
-                <TableHead>Semester</TableHead>
-                <TableHead>Subjects</TableHead>
-                <TableHead>Faculty</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredRooms.map((room) => (
-                <TableRow key={room._id}>
-                  <TableCell className="font-medium">{room.name}</TableCell>
-                  <TableCell>{room.building}</TableCell>
-                  <TableCell>{room.capacity}</TableCell>
-                  <TableCell>{room.year}</TableCell>
-                  <TableCell>{room.semester}</TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1">
-                      {room.subjects.map((subject) => (
-                        <Badge key={subject._id} variant="secondary">
-                          {subject.code}
-                        </Badge>
-                      ))}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1">
-                      {room.faculty.map((teacher) => (
-                        <Badge key={teacher._id} variant="outline">
-                          {teacher.name}
-                        </Badge>
-                      ))}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEdit(room)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDelete(room._id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
+          {loading ? (
+            <div className="flex justify-center items-center p-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900" />
+            </div>
+          ) : rooms.length === 0 ? (
+            <div className="text-center p-8 text-gray-500">
+              No rooms found. Add a new room to get started.
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Building</TableHead>
+                  <TableHead>Capacity</TableHead>
+                  <TableHead>Year</TableHead>
+                  <TableHead>Semester</TableHead>
+                  <TableHead>Subjects</TableHead>
+                  <TableHead>Faculty</TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {filteredRooms.map((room) => (
+                  <TableRow key={room._id}>
+                    <TableCell className="font-medium">{room.name}</TableCell>
+                    <TableCell>{room.building}</TableCell>
+                    <TableCell>{room.capacity}</TableCell>
+                    <TableCell>{room.year}</TableCell>
+                    <TableCell>{room.semester}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {room.subjects.map((subject) => (
+                          <Badge key={subject._id} variant="secondary">
+                            {subject.code}
+                          </Badge>
+                        ))}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {room.faculty.map((teacher) => (
+                          <Badge key={teacher._id} variant="outline">
+                            {teacher.name}
+                          </Badge>
+                        ))}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEdit(room)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDelete(room._id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
 
