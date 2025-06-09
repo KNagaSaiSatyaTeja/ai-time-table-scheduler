@@ -1,7 +1,7 @@
 from typing import List, Dict, Any, Tuple, Optional
 from collections import defaultdict
-from model import ScheduleInput, ScheduleAssignment, TimeSlot, Break
-from utils import check_time_conflict, check_break_conflict, time_to_minutes, minutes_to_time, VALID_DAYS, generate_time_slots, generate_weekly_time_slots
+from model import ScheduleInput, ScheduleAssignment, TimeSlot, Break, Subject, Faculty
+from utils import check_time_conflict, check_break_conflict, time_to_minutes, minutes_to_time, VALID_DAYS, generate_time_slots, generate_weekly_time_slots, calculate_preference_score
 import random
 from datetime import datetime
 import logging
@@ -15,8 +15,20 @@ class ConstraintChecker:
         self.subjects = subjects
 
     def sort_subjects_by_constraints(self, subjects: List) -> List:
-        """Sort subjects by scheduling difficulty (e.g., fewer faculty, more classes)."""
-        return sorted(subjects, key=lambda s: (len(s.faculty), -s.no_of_classes_per_week))
+        """Sort subjects by scheduling difficulty and special class priority."""
+        def sort_key(s):
+            # Special classes get higher priority (lower sort value)
+            special_priority = 0 if s.is_special else 1
+            # Fewer faculty = harder to schedule
+            faculty_constraint = len(s.faculty)
+            # More classes needed = higher priority
+            class_priority = -s.no_of_classes_per_week
+            # Longer duration = harder to fit
+            duration_constraint = s.time / 50  # Normalize to 50-minute periods
+            
+            return (special_priority, faculty_constraint, class_priority, duration_constraint)
+        
+        return sorted(subjects, key=sort_key)
 
     def get_valid_slots(self, availability: List[TimeSlot], fixed_slots: List[TimeSlot], duration: int) -> List[TimeSlot]:
         """Get slots that match the faculty's availability and required duration."""
@@ -36,6 +48,16 @@ class ConstraintChecker:
                         break
         return valid_slots
 
+    def get_preferred_slots(self, subject: Subject, faculty: Faculty, valid_slots: List[TimeSlot]) -> List[Tuple[TimeSlot, int]]:
+        """Get valid slots sorted by preference score."""
+        slot_scores = []
+        for slot in valid_slots:
+            score = calculate_preference_score(slot, subject.preferred_slots, faculty.preferred_slots)
+            slot_scores.append((slot, score))
+        
+        # Sort by score (highest first)
+        return sorted(slot_scores, key=lambda x: x[1], reverse=True)
+
     def check_constraints(self, faculty_id: str, time_slot: TimeSlot, room_id: str, input_data: ScheduleInput) -> bool:
         """Check additional constraints (e.g., faculty preferences)."""
         return True
@@ -49,6 +71,8 @@ class SchedulerService:
         self.time_slot_labels: List[str] = []
         self.fixed_slots: List[TimeSlot] = []
         self.schedule_history = []
+        self.faculty_schedule: Dict[str, Dict[str, List[TimeSlot]]] = {}  # faculty_id -> day -> slots
+        self.room_schedule: Dict[str, Dict[str, List[TimeSlot]]] = {}     # room_id -> day -> slots
 
     def _validate_time(self, time_str: str, field: str) -> None:
         """Validate a time string format."""
@@ -72,49 +96,93 @@ class SchedulerService:
         self._validate_time(input_data.college_time.startTime, "college_time startTime")
         self._validate_time(input_data.college_time.endTime, "college_time endTime")
 
-    def _is_valid_assignment(self, faculty_id: str, time_slot: TimeSlot, room_id: str, input_data: ScheduleInput) -> bool:
-        """Check if an assignment is valid using ConstraintChecker and existing assignments."""
-        if not self.constraint_checker.check_constraints(faculty_id, time_slot, room_id, input_data):
-            return False
+    def _initialize_schedules(self, input_data: ScheduleInput):
+        """Initialize faculty and room schedules."""
+        # Initialize faculty schedules
+        for subject in input_data.subjects:
+            for faculty in subject.faculty:
+                if faculty.id not in self.faculty_schedule:
+                    self.faculty_schedule[faculty.id] = {day: [] for day in VALID_DAYS}
         
-        # Check for break conflicts
-        if check_break_conflict(time_slot, input_data.break_):
-            logger.debug(f"Break conflict for slot {time_slot.day} {time_slot.startTime}-{time_slot.endTime}")
-            return False
-        
-        # Check for faculty and room conflicts
-        for assignment in self.all_assignments:
-            if assignment.faculty_id == faculty_id and assignment.day == time_slot.day:
-                assigned_slot = TimeSlot(
-                    day=assignment.day,
-                    startTime=assignment.startTime,
-                    endTime=assignment.endTime
-                )
-                if check_time_conflict(time_slot, assigned_slot):
-                    logger.debug(f"Faculty conflict for {faculty_id} at {time_slot.day} {time_slot.startTime}-{time_slot.endTime}")
+        # Initialize room schedules
+        for room in input_data.rooms:
+            if room not in self.room_schedule:
+                self.room_schedule[room] = {day: [] for day in VALID_DAYS}
+
+    def _is_slot_available(self, faculty_id: str, room_id: str, time_slot: TimeSlot) -> bool:
+        """Check if a slot is available for both faculty and room."""
+        # Check faculty availability
+        if faculty_id in self.faculty_schedule:
+            for existing_slot in self.faculty_schedule[faculty_id][time_slot.day]:
+                if check_time_conflict(time_slot, existing_slot):
                     return False
-            
-            if assignment.room_id == room_id and assignment.day == time_slot.day:
-                assigned_slot = TimeSlot(
-                    day=assignment.day,
-                    startTime=assignment.startTime,
-                    endTime=assignment.endTime
-                )
-                if check_time_conflict(time_slot, assigned_slot):
-                    logger.debug(f"Room conflict for {room_id} at {time_slot.day} {time_slot.startTime}-{time_slot.endTime}")
+        
+        # Check room availability
+        if room_id in self.room_schedule:
+            for existing_slot in self.room_schedule[room_id][time_slot.day]:
+                if check_time_conflict(time_slot, existing_slot):
                     return False
         
         return True
 
+    def _book_slot(self, faculty_id: str, room_id: str, time_slot: TimeSlot):
+        """Book a slot for faculty and room."""
+        if faculty_id not in self.faculty_schedule:
+            self.faculty_schedule[faculty_id] = {day: [] for day in VALID_DAYS}
+        if room_id not in self.room_schedule:
+            self.room_schedule[room_id] = {day: [] for day in VALID_DAYS}
+        
+        self.faculty_schedule[faculty_id][time_slot.day].append(time_slot)
+        self.room_schedule[room_id][time_slot.day].append(time_slot)
+
+    def _is_valid_assignment(self, faculty_id: str, time_slot: TimeSlot, room_id: str, input_data: ScheduleInput) -> bool:
+        """Enhanced validity check with better conflict detection."""
+        # Check for break conflicts (including ALL_DAYS)
+        if check_break_conflict(time_slot, input_data.break_):
+            return False
+        
+        # Check faculty availability window
+        faculty = None
+        for subject in input_data.subjects:
+            for f in subject.faculty:
+                if f.id == faculty_id:
+                    faculty = f
+                    break
+            if faculty:
+                break
+        
+        if not faculty:
+            return False
+        
+        # Check if faculty is available during this time
+        faculty_available = False
+        for avail in faculty.availability:
+            if avail.day == time_slot.day:
+                avail_start = time_to_minutes(avail.startTime)
+                avail_end = time_to_minutes(avail.endTime)
+                slot_start = time_to_minutes(time_slot.startTime)
+                slot_end = time_to_minutes(time_slot.endTime)
+                if avail_start <= slot_start and slot_end <= avail_end:
+                    faculty_available = True
+                    break
+        
+        if not faculty_available:
+            return False
+        
+        # Check slot availability
+        return self._is_slot_available(faculty_id, room_id, time_slot)
+
     def _add_assignment(self, assignment: ScheduleAssignment):
-        """Add an assignment to the internal tracking dictionaries."""
+        """Add an assignment and update tracking."""
         self.all_assignments.append(assignment)
-        if assignment.faculty_id not in self.assignments:
-            self.assignments[assignment.faculty_id] = []
-        self.assignments[assignment.faculty_id].append(assignment)
-        if assignment.room_id not in self.assignments:
-            self.assignments[assignment.room_id] = []
-        self.assignments[assignment.room_id].append(assignment)
+        
+        # Book the slot
+        time_slot = TimeSlot(
+            day=assignment.day,
+            startTime=assignment.startTime,
+            endTime=assignment.endTime
+        )
+        self._book_slot(assignment.faculty_id, assignment.room_id, time_slot)
 
     def _build_weekly_schedule(self, schedule: List[ScheduleAssignment]) -> Dict[str, List[Any]]:
         """Convert flat schedule into weekly table format."""
@@ -140,95 +208,127 @@ class SchedulerService:
         """Generate time slots for all days using the updated generate_weekly_time_slots."""
         return generate_weekly_time_slots(start_time, end_time, breaks, subjects)
 
-    def _fill_remaining_slots(self, schedule: List[ScheduleAssignment], input_data: ScheduleInput) -> List[ScheduleAssignment]:
-        """Fill all remaining non-break slots with available subjects and faculty."""
-        weekly_schedule = self._build_weekly_schedule(schedule)
-
-        subject_counts = {subject.name: 0 for subject in input_data.subjects}
-        for a in schedule:
-            subject_counts[a.subject_name] += 1
-
+    def _aggressive_fill_slots(self, schedule: List[ScheduleAssignment], input_data: ScheduleInput) -> List[ScheduleAssignment]:
+        """Aggressively fill ALL available slots with maximum efficiency."""
         new_assignments = schedule.copy()
         
-        # Track which slots are already used
-        used_slots = set((a.day, a.startTime, a.endTime) for a in new_assignments)
+        # Get all available subject-faculty combinations
+        subject_faculty_combinations = []
+        for subject in input_data.subjects:
+            for faculty in subject.faculty:
+                subject_faculty_combinations.append((subject, faculty))
         
-        # Track which slots are breaks
-        break_slots = set()
+        # Get all available slots (excluding breaks)
+        available_slots = []
         for day in VALID_DAYS:
-            for slot in self.fixed_slots:
-                if slot.day != day:
-                    continue
-                slot_obj = TimeSlot(day=day, startTime=slot.startTime, endTime=slot.endTime)
-                if check_break_conflict(slot_obj, input_data.break_):
-                    break_slots.add((day, slot.startTime, slot.endTime))
-
-        # Try to fill remaining slots
-        for day in VALID_DAYS:
-            for slot_idx, slot_label in enumerate(self.time_slot_labels):
+            for slot_label in self.time_slot_labels:
                 start_time, end_time = slot_label.split('-')
-                
-                # Skip if slot is already assigned or is a break
-                if weekly_schedule[day][slot_idx] is not None or (day, start_time, end_time) in break_slots:
-                    continue
-                
                 slot_obj = TimeSlot(day=day, startTime=start_time, endTime=end_time)
-                slot_duration = self._get_slot_duration(slot_obj)
                 
-                # Find subjects that fit this slot duration
-                subjects_to_consider = [
-                    s for s in input_data.subjects
-                    if s.time == slot_duration
-                ]
-
-                if not subjects_to_consider:
-                    logger.warning(f"No subjects available to fill slot {day} {slot_label}")
-                    continue
-
-                random.shuffle(subjects_to_consider)
-                assigned = False
-                
-                for subject in subjects_to_consider:
-                    for faculty in random.sample(subject.faculty, len(subject.faculty)):
-                        if self._is_valid_assignment(faculty.id, slot_obj, self.single_room_id, input_data):
-                            assignment = ScheduleAssignment(
-                                subject_name=subject.name,
-                                faculty_id=faculty.id,
-                                faculty_name=faculty.name,
-                                day=day,
-                                startTime=start_time,
-                                endTime=end_time,
-                                room_id=self.single_room_id
-                            )
-                            new_assignments.append(assignment)
-                            self._add_assignment(assignment)
-                            used_slots.add((day, start_time, end_time))
-                            subject_counts[subject.name] += 1
-                            assigned = True
-                            logger.info(f"Filled slot {day} {slot_label} with {subject.name} by {faculty.name}")
-                            break
-                    if assigned:
-                        break
-
-                if not assigned:
-                    logger.warning(f"Could not fill slot {day} {slot_label} with any subject")
-
+                # Skip break slots
+                if not check_break_conflict(slot_obj, input_data.break_):
+                    available_slots.append(slot_obj)
+        
+        logger.info(f"Total available slots (excluding breaks): {len(available_slots)}")
+        
+        # Track assigned slots
+        assigned_slots = set()
+        for assignment in new_assignments:
+            assigned_slots.add((assignment.day, assignment.startTime, assignment.endTime))
+        
+        # Sort slots by time for better distribution
+        available_slots.sort(key=lambda s: (VALID_DAYS.index(s.day), time_to_minutes(s.startTime)))
+        
+        # Fill each available slot
+        for slot in available_slots:
+            slot_key = (slot.day, slot.startTime, slot.endTime)
+            
+            # Skip if already assigned
+            if slot_key in assigned_slots:
+                continue
+            
+            slot_duration = self._get_slot_duration(slot)
+            if slot_duration <= 0:
+                continue
+            
+            # Find compatible subject-faculty combinations
+            compatible_combinations = []
+            for subject, faculty in subject_faculty_combinations:
+                if subject.time == slot_duration:
+                    # Check if faculty is available for this slot
+                    faculty_available = False
+                    for avail in faculty.availability:
+                        if avail.day == slot.day:
+                            avail_start = time_to_minutes(avail.startTime)
+                            avail_end = time_to_minutes(avail.endTime)
+                            slot_start = time_to_minutes(slot.startTime)
+                            slot_end = time_to_minutes(slot.endTime)
+                            if avail_start <= slot_start and slot_end <= avail_end:
+                                faculty_available = True
+                                break
+                    
+                    if faculty_available:
+                        # Calculate preference score
+                        pref_score = calculate_preference_score(slot, subject.preferred_slots, faculty.preferred_slots)
+                        compatible_combinations.append((subject, faculty, pref_score))
+            
+            if not compatible_combinations:
+                logger.debug(f"No compatible combinations for slot {slot.day} {slot.startTime}-{slot.endTime}")
+                continue
+            
+            # Sort by preference score (highest first), then by special class priority
+            compatible_combinations.sort(key=lambda x: (x[0].is_special, x[2]), reverse=True)
+            
+            # Try to assign the best combination
+            assigned = False
+            for subject, faculty, pref_score in compatible_combinations:
+                if self._is_valid_assignment(faculty.id, slot, self.single_room_id, input_data):
+                    assignment = ScheduleAssignment(
+                        subject_name=subject.name,
+                        faculty_id=faculty.id,
+                        faculty_name=faculty.name,
+                        day=slot.day,
+                        startTime=slot.startTime,
+                        endTime=slot.endTime,
+                        room_id=self.single_room_id,
+                        is_special=subject.is_special,
+                        priority_score=pref_score
+                    )
+                    
+                    new_assignments.append(assignment)
+                    self._add_assignment(assignment)
+                    assigned_slots.add(slot_key)
+                    assigned = True
+                    
+                    logger.debug(f"Filled slot {slot.day} {slot.startTime}-{slot.endTime} with {subject.name} by {faculty.name} (score: {pref_score})")
+                    break
+            
+            if not assigned:
+                logger.debug(f"Could not fill slot {slot.day} {slot.startTime}-{slot.endTime}")
+        
+        logger.info(f"Aggressive fill completed: {len(new_assignments)} total assignments")
         return new_assignments
 
     def generate_schedule(self, input_data: ScheduleInput, use_ga: bool = False) -> Dict[str, Any]:
-        """Generate a weekly schedule based on input data."""
+        """Generate a weekly schedule with maximum slot utilization."""
         try:
             self._validate_input(input_data)
         except ValueError as e:
             logger.error(f"Input validation failed: {e}")
             raise
 
+        # Reset all tracking
         self.assignments.clear()
         self.all_assignments.clear()
+        self.faculty_schedule.clear()
+        self.room_schedule.clear()
 
         if not input_data.rooms:
             raise ValueError("At least one room must be provided.")
         self.single_room_id = input_data.rooms[0]
+
+        # Initialize schedules
+        self._initialize_schedules(input_data)
 
         self.time_slot_labels, self.fixed_slots = self._generate_weekly_slots(
             input_data.college_time.startTime,
@@ -238,6 +338,13 @@ class SchedulerService:
         )
         if not self.time_slot_labels:
             raise ValueError("No valid time slots generated. Check college time, breaks, and subject durations.")
+
+        logger.info(f"Generated {len(self.time_slot_labels)} time slots: {self.time_slot_labels}")
+        
+        # Log ALL_DAYS breaks
+        all_days_breaks = [b for b in input_data.break_ if b.day == "ALL_DAYS"]
+        if all_days_breaks:
+            logger.info(f"ALL_DAYS breaks: {[(b.startTime, b.endTime) for b in all_days_breaks]}")
 
         self.constraint_checker = ConstraintChecker(input_data.subjects)
 
@@ -258,14 +365,17 @@ class SchedulerService:
             subjects = self.constraint_checker.sort_subjects_by_constraints(input_data.subjects)
             subject_counts = {subject.name: 0 for subject in subjects}
 
-            # First pass: Ensure minimum required classes are scheduled
+            # Phase 1: Schedule minimum required classes with preferences
+            logger.info("Phase 1: Scheduling minimum required classes...")
             for subject in subjects:
                 required_classes = subject.no_of_classes_per_week
-                while subject_counts[subject.name] < required_classes:
+                logger.info(f"Scheduling {subject.name} ({'SPECIAL' if subject.is_special else 'REGULAR'}) - {required_classes} classes needed")
+                
+                for _ in range(required_classes):
                     assigned = False
-                    shuffled_faculty = random.sample(subject.faculty, len(subject.faculty))
                     
-                    for faculty in shuffled_faculty:
+                    # Try each faculty for this subject
+                    for faculty in subject.faculty:
                         valid_slots = self.constraint_checker.get_valid_slots(
                             faculty.availability,
                             self.fixed_slots,
@@ -273,13 +383,13 @@ class SchedulerService:
                         )
 
                         if not valid_slots:
-                            logger.debug(f"No valid slots for {subject.name} with faculty {faculty.name}")
                             continue
 
-                        for slot in random.sample(valid_slots, len(valid_slots)):
-                            if check_break_conflict(slot, input_data.break_):
-                                continue
-
+                        # Get slots sorted by preference
+                        preferred_slots = self.constraint_checker.get_preferred_slots(subject, faculty, valid_slots)
+                        
+                        # Try preferred slots first
+                        for slot, preference_score in preferred_slots:
                             if self._is_valid_assignment(faculty.id, slot, self.single_room_id, input_data):
                                 assignment = ScheduleAssignment(
                                     subject_name=subject.name,
@@ -288,52 +398,70 @@ class SchedulerService:
                                     day=slot.day,
                                     startTime=slot.startTime,
                                     endTime=slot.endTime,
-                                    room_id=self.single_room_id
+                                    room_id=self.single_room_id,
+                                    is_special=subject.is_special,
+                                    priority_score=preference_score
                                 )
                                 schedule.append(assignment)
                                 self._add_assignment(assignment)
                                 subject_counts[subject.name] += 1
                                 assigned = True
-                                logger.info(f"Assigned {subject.name} to {faculty.name} at {slot.day} {slot.startTime}-{slot.endTime}")
+                                
+                                pref_msg = f" (preference score: {preference_score})" if preference_score > 0 else ""
+                                logger.info(f"Assigned {subject.name} to {faculty.name} at {slot.day} {slot.startTime}-{slot.endTime}{pref_msg}")
                                 break
                         if assigned:
                             break
+                    
                     if not assigned:
-                        logger.warning(f"Could not assign {subject.name} (required: {required_classes}, assigned: {subject_counts[subject.name]})")
-                        break
+                        logger.warning(f"Could not assign required class for {subject.name}")
 
-        # Fill remaining slots
-        schedule = self._fill_remaining_slots(schedule, input_data)
-        
-        # Find unassigned slots
+            logger.info(f"Phase 1 completed: {len(schedule)} assignments made")
+
+            # Phase 2: Aggressively fill ALL remaining slots
+            logger.info("Phase 2: Aggressively filling remaining slots...")
+            schedule = self._aggressive_fill_slots(schedule, input_data)
+
+        # Calculate final statistics
         unassigned_slots = []
         weekly_schedule = self._build_weekly_schedule(schedule)
         
-        break_slots = set()
+        # Count break slots (including ALL_DAYS)
+        break_slot_count = 0
+        total_slots = len(VALID_DAYS) * len(self.time_slot_labels)
+        
         for day in VALID_DAYS:
-            for slot in self.fixed_slots:
-                if slot.day != day:
-                    continue
-                slot_obj = TimeSlot(day=day, startTime=slot.startTime, endTime=slot.endTime)
+            for idx, slot_label in enumerate(self.time_slot_labels):
+                start_time, end_time = slot_label.split('-')
+                slot_obj = TimeSlot(day=day, startTime=start_time, endTime=end_time)
+                
                 if check_break_conflict(slot_obj, input_data.break_):
-                    slot_label = f"{slot.startTime}-{slot.endTime}"
-                    if slot_label in self.time_slot_labels:
-                        break_slots.add((day, self.time_slot_labels.index(slot_label)))
-
-        for day in weekly_schedule:
-            for idx, slot in enumerate(weekly_schedule[day]):
-                if slot is None and (day, idx) not in break_slots:
-                    slot_label = self.time_slot_labels[idx]
+                    break_slot_count += 1
+                elif weekly_schedule[day][idx] is None:
                     unassigned_slots.append(f"{day} {slot_label}")
 
         # Calculate fitness score
-        total_slots = len(VALID_DAYS) * len(self.time_slot_labels) - len(break_slots)
-        fitness = 1.0 - (len(unassigned_slots) / total_slots) if total_slots > 0 else 0.0
+        total_available_slots = total_slots - break_slot_count
+        fitness = 1.0 - (len(unassigned_slots) / total_available_slots) if total_available_slots > 0 else 0.0
+        
+        # Calculate preference satisfaction
+        total_preference_score = sum(assignment.priority_score for assignment in schedule)
+        avg_preference_score = total_preference_score / len(schedule) if schedule else 0
+        
+        logger.info(f"FINAL RESULTS:")
+        logger.info(f"  Total slots: {total_slots}")
+        logger.info(f"  Break slots: {break_slot_count}")
+        logger.info(f"  Available slots: {total_available_slots}")
+        logger.info(f"  Assigned slots: {len(schedule)}")
+        logger.info(f"  Unassigned slots: {len(unassigned_slots)}")
+        logger.info(f"  Fitness: {fitness:.3f}")
+        logger.info(f"  Avg preference score: {avg_preference_score:.1f}")
         
         # Save schedule to history
         schedule_data = {
             "schedule": [assignment.model_dump() for assignment in schedule],
             "fitness": fitness,
+            "preference_score": avg_preference_score,
             "timestamp": datetime.now().isoformat()
         }
         self.schedule_history.append(schedule_data)
@@ -344,7 +472,12 @@ class SchedulerService:
                 "days": weekly_schedule
             },
             "unassigned": unassigned_slots,
-            "fitness": fitness
+            "fitness": fitness,
+            "preference_score": avg_preference_score,
+            "break_slots": break_slot_count,
+            "total_assignments": len(schedule),
+            "total_available_slots": total_available_slots,
+            "utilization_percentage": round((len(schedule) / total_available_slots) * 100, 1) if total_available_slots > 0 else 0
         }
     
     def get_schedule_history(self) -> List[Dict]:

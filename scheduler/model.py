@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 @dataclass
 class TimeSlot:
@@ -14,10 +14,22 @@ class Break:
     endTime: str  # e.g., "11:20" (24-hour format)
 
 @dataclass
+class PreferredSlot:
+    day: str  # Specific day or "ANY_DAY"
+    startTime: str
+    endTime: str
+    priority: int = 1  # 1=highest, 5=lowest priority
+
+@dataclass
 class Faculty:
     id: str
     name: str
     availability: List[TimeSlot]
+    preferred_slots: List[PreferredSlot] = None  # Preferred time slots
+    
+    def __post_init__(self):
+        if self.preferred_slots is None:
+            self.preferred_slots = []
 
 @dataclass
 class Subject:
@@ -26,7 +38,10 @@ class Subject:
     no_of_classes_per_week: int  # Number of classes required per week
     faculty: List[Faculty]
     duration: int = None  # Optional, for backward compatibility
-
+    is_special: bool = False  # Mark as special class (lab, practical, etc.)
+    preferred_slots: List[PreferredSlot] = None  # Subject-specific preferred slots
+    requires_consecutive: bool = False  # For labs that need consecutive periods
+    
     def __post_init__(self):
         if self.duration is None:
             self.duration = self.time
@@ -34,6 +49,8 @@ class Subject:
             self.time = self.duration
         if not hasattr(self, 'no_of_classes_per_week'):
             self.no_of_classes_per_week = 1
+        if self.preferred_slots is None:
+            self.preferred_slots = []
 
 @dataclass
 class CollegeTime:
@@ -49,6 +66,8 @@ class ScheduleAssignment:
     startTime: str
     endTime: str
     room_id: str
+    is_special: bool = False
+    priority_score: int = 0  # Higher score = better preference match
 
     def model_dump(self) -> Dict[str, Any]:
         """Return all fields as a dictionary for compatibility with SchedulerService."""
@@ -59,7 +78,9 @@ class ScheduleAssignment:
             "day": self.day,
             "startTime": self.startTime,
             "endTime": self.endTime,
-            "room_id": self.room_id
+            "room_id": self.room_id,
+            "is_special": self.is_special,
+            "priority_score": self.priority_score
         }
 
 @dataclass
