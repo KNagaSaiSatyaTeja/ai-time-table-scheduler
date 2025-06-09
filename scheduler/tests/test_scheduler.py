@@ -1,3 +1,12 @@
+
+import sys
+import os
+
+# Add the parent directory to system path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+
+
 import pytest
 from model import ScheduleInput, Subject, Faculty, TimeSlot, CollegeTime, Break
 from scheduler import SchedulerService

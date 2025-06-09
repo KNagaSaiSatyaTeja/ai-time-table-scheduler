@@ -1,92 +1,69 @@
-from pydantic import BaseModel, validator
-from typing import List, Optional
-from datetime import datetime
+# model.py
+from dataclasses import dataclass
+from typing import List
 
-class TimeSlot(BaseModel):
-    day: str
-    startTime: str
-    endTime: str
+@dataclass
+class TimeSlot:
+    day: str  # e.g., "MONDAY", "TUESDAY", ..., "SATURDAY"
+    startTime: str  # e.g., "09:30" (24-hour format)
+    endTime: str  # e.g., "10:20" (24-hour format)
 
-    @validator('day')
-    def validate_day(cls, v):
-        valid_days = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY']
-        if v.upper() not in valid_days:
-            raise ValueError(f'Day must be one of {valid_days}')
-        return v.upper()
+@dataclass
+class Break:
+    day: str  # "MONDAY", "TUESDAY", ..., "SATURDAY", or "ALL_DAYS" for all weekdays
+    startTime: str  # e.g., "11:10" (24-hour format)
+    endTime: str  # e.g., "11:20" (24-hour format)
 
-    @validator('startTime', 'endTime')
-    def validate_time(cls, v):
-        try:
-            datetime.strptime(v, "%I:%M %p")
-            return v
-        except ValueError:
-            raise ValueError('Time must be in format "HH:MM AM/PM"')
-
-class Break(BaseModel):
-    startTime: str
-    endTime: str
-
-    @validator('startTime', 'endTime')
-    def validate_time(cls, v):
-        try:
-            datetime.strptime(v, "%I:%M %p")
-            return v
-        except ValueError:
-            raise ValueError('Time must be in format "HH:MM AM/PM"')
-
-    @validator('endTime')
-    def validate_end_time(cls, v, values):
-        if 'startTime' in values:
-            start = datetime.strptime(values['startTime'], "%I:%M %p")
-            end = datetime.strptime(v, "%I:%M %p")
-            if end <= start:
-                raise ValueError('End time must be after start time')
-        return v
-
-class Faculty(BaseModel):
+@dataclass
+class Faculty:
     id: str
     name: str
     availability: List[TimeSlot]
-    preferred_slots: Optional[List[str]] = []
 
-class Subject(BaseModel):
+@dataclass
+class Subject:
     name: str
+    duration: int  # Deprecated, mapped to time for backward compatibility
+    time: int  # Duration in minutes (e.g., 50)
+    no_of_classes_per_week: int  # Number of classes required per week
     faculty: List[Faculty]
-    student_group: str
 
-class CollegeTime(BaseModel):
+    def __post_init__(self):
+        if not hasattr(self, 'time') or self.time is None:
+            self.time = self.duration
+        if not hasattr(self, 'no_of_classes_per_week'):
+            self.no_of_classes_per_week = 1
+
+@dataclass
+class CollegeTime:
+    startTime: str  # e.g., "09:30" (24-hour format)
+    endTime: str  # e.g., "14:50" (24-hour format)
+
+@dataclass
+class ScheduleAssignment:
+    subject_name: str
+    faculty_id: str
+    faculty_name: str  # Added for frontend display
+    day: str
     startTime: str
     endTime: str
+    room_id: str
 
-    @validator('startTime', 'endTime')
-    def validate_time(cls, v):
-        try:
-            datetime.strptime(v, "%I:%M %p")
-            return v
-        except ValueError:
-            raise ValueError('Time must be in format "HH:MM AM/PM"')
+    def model_dump(self):
+        # Updated to return all fields for compatibility with SchedulerService
+        return {
+            "subject_name": self.subject_name,
+            "faculty_id": self.faculty_id,
+            "faculty_name": self.faculty_name,
+            "day": self.day,
+            "startTime": self.startTime,
+            "endTime": self.endTime,
+            "room_id": self.room_id
+        }
 
-    @validator('endTime')
-    def validate_end_time(cls, v, values):
-        if 'startTime' in values:
-            start = datetime.strptime(values['startTime'], "%I:%M %p")
-            end = datetime.strptime(v, "%I:%M %p")
-            if end <= start:
-                raise ValueError('End time must be after start time')
-        return v
-
-class ScheduleInput(BaseModel):
+@dataclass
+class ScheduleInput:
     subjects: List[Subject]
     break_: List[Break]
     college_time: CollegeTime
     rooms: List[str]
-
-class ScheduleAssignment(BaseModel):
-    subject: str
-    faculty_id: str
-    faculty_name: str
-    day: str
-    startTime: str
-    endTime: str
-    student_group: str
-    room_id: str
