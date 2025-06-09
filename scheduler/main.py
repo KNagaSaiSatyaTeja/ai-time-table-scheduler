@@ -1,9 +1,11 @@
-from fastapi import FastAPI, HTTPException, Query, Depends
+from fastapi import FastAPI, HTTPException, Query, Depends, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
 from typing import Optional, List, Dict, Any
 from model import ScheduleInput, ScheduleAssignment, Break
 from scheduler import SchedulerService
 import logging
+import json
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -38,7 +40,8 @@ async def root():
         "endpoints": {
             "generate_schedule": "/api/generate-schedule",
             "schedule_history": "/api/schedule-history",
-            "health": "/api/health"
+            "health": "/api/health",
+            "schedule_table": "/api/schedule-table"
         }
     }
 
@@ -88,6 +91,23 @@ async def get_schedule_history():
     except Exception as e:
         logger.error(f"Error retrieving schedule history: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+@app.get("/api/schedule-table", response_class=HTMLResponse)
+async def get_schedule_table():
+    """
+    Get the latest schedule in HTML table format.
+    """
+    try:
+        history = scheduler_service.get_schedule_history()
+        if not history:
+            return "<p>No schedules generated yet.</p>"
+        
+        latest = history[-1]
+        result = scheduler_service.generate_schedule(latest["schedule"])
+        return result["tabular_schedule"]["html"]
+    except Exception as e:
+        logger.error(f"Error retrieving schedule table: {str(e)}")
+        return f"<p>Error: {str(e)}</p>"
 
 @app.get("/api/health")
 async def health_check():
