@@ -22,22 +22,6 @@ export function LoginForm() {
     password: "",
   });
 
-  const navigateToDashboard = () => {
-    const token = localStorage.getItem("token");
-    const user = localStorage.getItem("user");
-
-    if (token && user) {
-      const parsedUser = JSON.parse(user);
-      if (parsedUser.role === "admin") {
-        router.push("/dashboard");
-      } else {
-        router.push("/user-dashboard");
-      }
-    } else {
-      router.push("/dashboard");
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -51,9 +35,8 @@ export function LoginForm() {
         }
       );
 
-      const data = await response.data.data;
-      // Check if the response is successful
-      console.log("Login response:", data);
+      const data = response.data;
+
       if (!response.status || response.status !== 200) {
         throw new Error(data.message || "Login failed");
       }
@@ -65,7 +48,13 @@ export function LoginForm() {
       // Show success message
       toast.success("Login successful!");
 
-      // Redirect based on user role
+      // Reset form data
+      setFormData({
+        email: "",
+        password: "",
+      });
+
+      // Handle navigation based on role
       if (data.user.role === "admin") {
         router.push("/dashboard");
       } else if (data.user.role === "teacher") {
@@ -77,12 +66,6 @@ export function LoginForm() {
       toast.error(error.message || "Failed to login");
     } finally {
       setIsLoading(false);
-      navigateToDashboard();
-      // Reset form data
-      setFormData({
-        email: "",
-        password: "",
-      });
     }
   };
 

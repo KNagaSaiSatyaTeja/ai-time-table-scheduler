@@ -1,31 +1,24 @@
-"use client"
+"use client";
 
-import { useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { useAuth } from "@/hooks/use-auth"
-import { Loader2 } from "lucide-react"
+import { useAuth } from '@/components/auth-provider';
+import AuthPage from '@/components/auth-page';
+import Dashboard from '@/components/dashboard';
+import { Loader2 } from 'lucide-react';
 
-export default function HomePage() {
-  const router = useRouter()
-  const { user, loading } = useAuth()
+export default function Home() {
+  const { user, isLoading } = useAuth();
 
-  useEffect(() => {
-    if (!loading) {
-      if (user) {
-        router.push("/dashboard")
-      } else {
-        router.push("/login")
-      }
-    }
-  }, [user, loading, router])
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
       </div>
-    )
+    );
   }
 
-  return null
+  if (!user) {
+    return <AuthPage />;
+  }
+
+  return <Dashboard />;
 }
