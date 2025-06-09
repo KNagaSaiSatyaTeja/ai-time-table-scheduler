@@ -607,11 +607,10 @@ class SchedulerService:
         html_table = tabulate.tabulate(rows, headers=headers, tablefmt="html")
         
         # Create text table
-        text_table = tabulate.tabulate(rows, headers=headers, tablefmt="grid")
+        
         
         return {
             "html": html_table,
-            "text": text_table
         }
     
     def get_schedule_history(self) -> List[Dict]:
