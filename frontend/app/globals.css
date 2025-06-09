@@ -2,13 +2,17 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  font-family: Arial, Helvetica, sans-serif;
+:root {
+  --foreground-rgb: 0, 0, 0;
+  --background-start-rgb: 214, 219, 220;
+  --background-end-rgb: 255, 255, 255;
 }
 
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
+@media (prefers-color-scheme: dark) {
+  :root {
+    --foreground-rgb: 255, 255, 255;
+    --background-start-rgb: 0, 0, 0;
+    --background-end-rgb: 0, 0, 0;
   }
 }
 
@@ -39,14 +43,6 @@ body {
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
     --radius: 0.5rem;
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
   }
   .dark {
     --background: 0 0% 3.9%;
@@ -73,14 +69,6 @@ body {
     --chart-3: 30 80% 55%;
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
   }
 }
 
@@ -91,55 +79,4 @@ body {
   body {
     @apply bg-background text-foreground;
   }
-}
-
-/* Custom styles for tabs */
-.tabs-list {
-  scrollbar-width: thin;
-  scrollbar-color: #888 #f1f1f1;
-}
-
-.tabs-list::-webkit-scrollbar {
-  height: 6px;
-}
-
-.tabs-list::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 3px;
-}
-
-.tabs-list::-webkit-scrollbar-thumb {
-  background: #888;
-  border-radius: 3px;
-}
-
-.tabs-list::-webkit-scrollbar-thumb:hover {
-  background: #555;
-}
-
-@media (max-width: 640px) {
-  .tabs-list {
-    gap: 0.25rem;
-  }
-}
-
-/* Layout styles */
-.page-container {
-  @apply p-4 md:p-6 lg:p-8 max-w-7xl mx-auto;
-}
-
-.dashboard-grid {
-  @apply grid gap-6 md:grid-cols-2 lg:grid-cols-3;
-}
-
-.overview-section {
-  @apply space-y-6;
-}
-
-.stat-card {
-  @apply p-4 rounded-lg border bg-card text-card-foreground shadow-sm;
-}
-
-.quick-actions {
-  @apply col-span-full;
 }
