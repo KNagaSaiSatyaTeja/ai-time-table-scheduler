@@ -57,9 +57,7 @@ export function LoginForm() {
       // Handle navigation based on role
       if (data.user.role === "admin") {
         router.push("/dashboard");
-      } else if (data.user.role === "teacher") {
-        router.push("/teacher-dashboard");
-      } else {
+      }  else {
         router.push("/student-dashboard");
       }
     } catch (error: any) {
