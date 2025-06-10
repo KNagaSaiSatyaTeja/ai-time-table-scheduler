@@ -79,8 +79,8 @@ export function RoomManagement() {
 
   const filteredRooms = rooms.filter(
     (room) =>
-      room.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      room.building.toLowerCase().includes(searchTerm.toLowerCase())
+      room.number.toString().toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (room?.roomType ?? "").toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -142,8 +142,8 @@ export function RoomManagement() {
               <TableBody>
                 {filteredRooms.map((room) => (
                   <TableRow key={room._id}>
-                    <TableCell className="font-medium">{room.name}</TableCell>
-                    <TableCell>{room.building}</TableCell>
+                    <TableCell className="font-medium">{room.number.toLocaleString()}</TableCell>
+                    
                     <TableCell>{room.capacity}</TableCell>
                     <TableCell>{room.year}</TableCell>
                     <TableCell>{room.semester}</TableCell>
@@ -151,14 +151,14 @@ export function RoomManagement() {
                       <div className="flex flex-wrap gap-1">
                         {room.subjects.map((subject) => (
                           <Badge key={subject._id} variant="secondary">
-                            {subject.code}
+                            {subject.name}
                           </Badge>
                         ))}
                       </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
-                        {room.faculty.map((teacher) => (
+                        {room.faculty?.map((teacher) => (
                           <Badge key={teacher._id} variant="outline">
                             {teacher.name}
                           </Badge>

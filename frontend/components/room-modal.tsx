@@ -17,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Room } from "@/types/room";
+import { Room, FormDataType } from "@/types/room";
 import axios from "axios";
 import { toast } from "sonner";
 import { X, Plus, Loader2 } from "lucide-react";
@@ -32,17 +32,6 @@ interface RoomModalProps {
   onSuccess: () => void;
 }
 
-interface FormDataType {
-  name: string;
-  building: string;
-  capacity: number;
-  year: number;
-  semester: number;
-  subjects: string[];
-  department: string;
-  faculty?: string[];
-}
-
 export function RoomModal({
   isOpen,
   onClose,
@@ -50,19 +39,28 @@ export function RoomModal({
   onSuccess,
 }: RoomModalProps) {
   const [formData, setFormData] = useState<FormDataType>({
-    name: "",
+    number: null,
     building: "",
-    capacity: 0,
+    capacity: 1,
     year: 1,
     semester: 1,
     subjects: [],
     department: "",
     faculty: [],
+    roomType: "Classroom",
   });
 
   const [loading, setLoading] = useState(false);
-  const [subjects, setSubjects] = useState([]);
-  const [faculty, setFaculty] = useState([]);
+  const [subjects, setSubjects] = useState<
+    Array<{
+      _id: string;
+      name: string;
+      code?: string;
+    }>
+  >([]);
+  const [faculty, setFaculty] = useState<Array<{ _id: string; name: string }>>(
+    []
+  );
   const [isSubjectModalOpen, setIsSubjectModalOpen] = useState(false);
 
   // Fetch subjects and faculty on component mount
@@ -94,7 +92,7 @@ export function RoomModal({
   useEffect(() => {
     if (room) {
       setFormData({
-        name: room.name,
+        number: room.number.toString(),
         building: room.building,
         capacity: room.capacity,
         year: room.year,
@@ -102,60 +100,79 @@ export function RoomModal({
         subjects: room.subjects?.map((subject) => subject._id) || [],
         department: room.department || "",
         faculty: room.faculty?.map((f) => f._id) || [],
+        roomType: (room.roomType as "Classroom" | "Laboratory" | "Seminar Hall" | "Conference Room") || "Classroom",
       });
     } else {
       setFormData({
-        name: "",
+        number: null,
         building: "",
-        capacity: 0,
+        capacity: 1,
         year: 1,
         semester: 1,
         subjects: [],
         department: "",
         faculty: [],
+        roomType: "Classroom",
       });
     }
   }, [room]);
 
+  // Update the handleSubmit function to properly handle the response and close the modal
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     const token = localStorage.getItem("token");
 
     try {
+      if (!formData.number || !formData.building || formData.capacity <= 0) {
+        toast.error("Please fill all required fields correctly");
+        return;
+      }
+
       const endpoint = room
         ? `http://localhost:5000/api/rooms/${room._id}`
         : "http://localhost:5000/api/rooms";
 
       const method = room ? "put" : "post";
 
-      const response =
-        method === "put"
-          ? await axios.put(endpoint, formData, {
-              headers: {
-                Authorization: `Bearer ${token}`,
-                "Content-Type": "application/json",
-              },
-            })
-          : await axios.post(endpoint, formData, {
-              headers: {
-                Authorization: `Bearer ${token}`,
-                "Content-Type": "application/json",
-              },
-            });
+      const response = await axios({
+        method,
+        url: endpoint,
+        data: formData,
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (response.data) {
+        toast.success(
+          room ? "Room updated successfully" : "Room created successfully"
+        );
+        onSuccess();
+        onClose();
+      }
     } catch (error: any) {
       const errorMessage =
         error.response?.data?.message || "Failed to save room";
       toast.error(errorMessage);
-      console.error("Room save error:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  // Add function to refresh subjects after new subject is added
+  // Add the handleSubjectAdded function implementation
   const handleSubjectAdded = async () => {
-
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.get("http://localhost:5000/api/subjects", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setSubjects(response.data.data || []);
+      toast.success("Subject list refreshed");
+    } catch (error) {
+      toast.error("Failed to refresh subjects");
+    }
   };
 
   return (
@@ -171,16 +188,16 @@ export function RoomModal({
           <form id="room-form" onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-3">
-                <Label htmlFor="name" className="text-sm font-medium">
-                  Room Name
+                <Label htmlFor="number" className="text-sm font-medium">
+                  Room Number
                 </Label>
                 <Input
-                  id="name"
-                  placeholder="Enter room name"
+                  id="number"
+                  placeholder="Enter room number"
                   className="w-full"
-                  value={formData.name}
+                  value={formData.number || ""}
                   onChange={(e) =>
-                    setFormData({ ...formData, name: e.target.value })
+                    setFormData({ ...formData, number: e.target.value })
                   }
                   required
                 />
@@ -237,6 +254,29 @@ export function RoomModal({
                   }
                   required
                 />
+              </div>
+
+              <div className="space-y-3">
+                <Label htmlFor="roomType" className="text-sm font-medium">
+                  Room Type
+                </Label>
+                <Select
+                  value={formData.roomType}
+                  onValueChange={(value) =>
+                    setFormData({
+                      ...formData,
+                      roomType: value as "Classroom" | "Laboratory",
+                    })
+                  }
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select room type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Classroom">Classroom</SelectItem>
+                    <SelectItem value="Laboratory">Laboratory</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
