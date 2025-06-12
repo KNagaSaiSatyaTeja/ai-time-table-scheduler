@@ -1,9 +1,9 @@
 "use client";
 
-import { useAuth } from '@/components/auth-provider';
-import AuthPage from '@/components/auth-page';
-import Dashboard from '@/components/dashboard';
-import { Loader2 } from 'lucide-react';
+import { useAuth } from "@/components/auth-provider";
+import { LoginForm } from "@/components/login-form";
+import Dashboard from "@/components/dashboard";
+import { Loader2 } from "lucide-react";
 
 export default function Home() {
   const { user, isLoading } = useAuth();
@@ -17,7 +17,7 @@ export default function Home() {
   }
 
   if (!user) {
-    return <AuthPage />;
+    return <LoginForm />;
   }
 
   return <Dashboard />;

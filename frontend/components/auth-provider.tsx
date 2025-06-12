@@ -1,18 +1,23 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
-
+import React, { createContext, useContext, useState, useEffect } from "react";
+import axios from "axios";
 export interface User {
   id: string;
   email: string;
   name: string;
-  role: 'admin' | 'user';
+  role: "admin" | "user";
 }
 
 interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<boolean>;
-  signup: (email: string, password: string, name: string, role: 'admin' | 'user') => Promise<boolean>;
+  signup: (
+    email: string,
+    password: string,
+    name: string,
+    role: "admin" | "user"
+  ) => Promise<boolean>;
   logout: () => void;
   isLoading: boolean;
 }
@@ -25,7 +30,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // Check for stored user session
-    const storedUser = localStorage.getItem('user');
+    const storedUser = localStorage.getItem("user");
     if (storedUser) {
       setUser(JSON.parse(storedUser));
     }
@@ -33,41 +38,53 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = async (email: string, password: string): Promise<boolean> => {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Mock authentication - in real app, validate with backend
-    const mockUser: User = {
-      id: '1',
-      email,
-      name: email.split('@')[0],
-      role: email.includes('admin') ? 'admin' : 'user'
-    };
-    
-    setUser(mockUser);
-    localStorage.setItem('user', JSON.stringify(mockUser));
-    return true;
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_BACKEND_API_URL || 'http://localhost:5000/api';
+      const res = await axios.post(`${apiUrl}/auth/login`, {
+        email,
+        password,
+      });
+
+      if (res.data && res.data.user) {
+        setUser(res.data.user);
+        localStorage.setItem("user", JSON.stringify(res.data.user));
+        // Store the token if it exists in the response
+        if (res.data.token) {
+          localStorage.setItem("token", res.data.token);
+        }
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Login error:', error);
+      throw error;
+    }
   };
 
-  const signup = async (email: string, password: string, name: string, role: 'admin' | 'user'): Promise<boolean> => {
+  const signup = async (
+    email: string,
+    password: string,
+    name: string,
+    role: "admin" | "user"
+  ): Promise<boolean> => {
     // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
     const newUser: User = {
       id: Date.now().toString(),
       email,
       name,
-      role
+      role,
     };
-    
+
     setUser(newUser);
-    localStorage.setItem('user', JSON.stringify(newUser));
+    localStorage.setItem("user", JSON.stringify(newUser));
     return true;
   };
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem('user');
+    localStorage.removeItem("user");
   };
 
   return (
@@ -80,7 +97,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 }

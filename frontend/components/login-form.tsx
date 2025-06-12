@@ -28,7 +28,7 @@ export function LoginForm() {
 
     try {
       const response = await axios.post(
-        "http://localhost:5000/api/auth/login",
+        `${process.env.NEXT_PUBLIC_BACKEND_URI}/auth/login`,
         {
           email: formData.email,
           password: formData.password,
@@ -47,6 +47,7 @@ export function LoginForm() {
 
       // Show success message
       toast.success("Login successful!");
+      router.push("/dashboard");
 
       // Reset form data
       setFormData({
@@ -55,11 +56,6 @@ export function LoginForm() {
       });
 
       // Handle navigation based on role
-      if (data.user.role === "admin") {
-        router.push("/dashboard");
-      }  else {
-        router.push("/student-dashboard");
-      }
     } catch (error: any) {
       toast.error(error.message || "Failed to login");
     } finally {

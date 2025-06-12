@@ -33,6 +33,9 @@ router.post("/generate",adminAuth, async (req, res) => {
         duration: subjectData.duration,
         time: subjectData.time,
         no_of_classes_per_week: subjectData.no_of_classes_per_week,
+        periods_per_day: subjectData.periods_per_day || 1,
+        periods_per_week: subjectData.periods_per_week || subjectData.no_of_classes_per_week,
+        max_continuous_periods: subjectData.max_continuous_periods || 2,
         faculty: subjectData.faculty,
       });
       await subject.save();

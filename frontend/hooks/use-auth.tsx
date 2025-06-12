@@ -13,7 +13,7 @@ import { toast } from "sonner";
 interface User {
   id: string;
   email: string;
-  username: string;
+  name: string;
   role: string;
 }
 
@@ -24,7 +24,14 @@ interface AuthContextType {
   loading: boolean;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const defaultAuth: AuthContextType = {
+  user: null,
+  login: () => {},
+  logout: () => {},
+  loading: false,
+};
+
+const AuthContext = createContext<AuthContextType>(defaultAuth);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -65,7 +72,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.setItem("token", userData.token);
       localStorage.setItem("user", JSON.stringify(userData.user));
       setUser(userData.user);
-      toast.success(`Welcome back, ${userData.user.username}!`);
+      router.push("/dashboard");
+      toast.success(`Welcome back, ${userData.user.name}!`);
     } catch (error) {
       console.error("❌ Login error:", error);
       toast.error("Failed to save auth data");

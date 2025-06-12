@@ -75,7 +75,7 @@ export function UserDashboard() {
         <div>
           <h1 className="text-3xl font-bold">Dashboard</h1>
           <p className="text-muted-foreground">
-            View your institution's timetables and faculty information
+            View your institution&apos;s timetables and faculty information
           </p>
         </div>
 
@@ -104,7 +104,7 @@ export function UserDashboard() {
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="timetables">Timetables</TabsTrigger>
             <TabsTrigger value="faculty">Faculty</TabsTrigger>
-            <TabsTrigger value="schedule">Today's Schedule</TabsTrigger>
+            <TabsTrigger value="schedule">Today&apos;s Schedule</TabsTrigger>
           </TabsList>
 
           <TabsContent value="timetables">
@@ -118,7 +118,7 @@ export function UserDashboard() {
           <TabsContent value="schedule" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Today's Classes</CardTitle>
+                <CardTitle>Today&apos;s Classes</CardTitle>
                 <CardDescription>
                   Your scheduled classes for today
                 </CardDescription>

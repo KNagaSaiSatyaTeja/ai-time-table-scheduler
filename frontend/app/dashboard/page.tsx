@@ -1,29 +1,46 @@
 "use client";
 
-import { useAuth } from "@/hooks/use-auth";
+import { useEffect } from "react";
+import { useAuth } from "@/components/auth-provider"; // ✅ useAuth from AuthProvider
 import { AdminDashboard } from "@/components/admin-dashboard";
 import { UserDashboard } from "@/components/user-dashboard";
 import { ProtectedRoute } from "@/components/protected-route";
 import { Loader2 } from "lucide-react";
-import { useEffect } from "react";
 
 export default function DashboardPage() {
-  const { user, loading } = useAuth();
+  const { user, isLoading } = useAuth(); // ✅ correct hook usage
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      try {
+        const parsedUser = JSON.parse(storedUser);
+        console.log("User in DashboardPage:", parsedUser);
+      } catch (err) {
+        console.warn("Failed to parse stored user:", err);
+      }
+    }
+  }, []);
 
-  if (loading) {
+  // Show loader while user is being validated
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
       </div>
     );
   }
-  useEffect(() => {
-    let user = JSON.parse(localStorage.getItem("user") || "{}");
-    console.log("User in DashboardPage:", user);
-  }, []);
+
+  // Debug log from localStorage if needed (not strictly necessary)
+
   return (
     <ProtectedRoute>
-      {user?.role === "admin" ? <AdminDashboard /> : <UserDashboard />}
+      {user?.role === "admin" ? (
+       
+          <AdminDashboard />
+        
+      ) : (
+        <UserDashboard />
+      )}
     </ProtectedRoute>
   );
 }

@@ -17,6 +17,24 @@ const SubjectSchema = new mongoose.Schema({
     type: Number,
     required: true,
   },
+  periods_per_day: {
+    type: Number,
+    default: 1,
+    min: 1,
+    max: 8
+  },
+  periods_per_week: {
+    type: Number,
+    required: true,
+    min: 1,
+    max: 30
+  },
+  max_continuous_periods: {
+    type: Number,
+    default: 2,
+    min: 1,
+    max: 4
+  },
   faculty: [
     {
       id: String,
